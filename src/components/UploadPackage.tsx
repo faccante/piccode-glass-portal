@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Upload, File, Github } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { usePackages } from '@/hooks/usePackages';
 
 interface UploadPackageProps {
   onClose: () => void;
@@ -25,6 +26,7 @@ const UploadPackage: React.FC<UploadPackageProps> = ({ onClose }) => {
   });
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
+  const { submitPackage } = usePackages();
   const { toast } = useToast();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -52,18 +54,26 @@ const UploadPackage: React.FC<UploadPackageProps> = ({ onClose }) => {
       return;
     }
 
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please log in to upload packages",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
-      // Simulate package upload
-      console.log('Uploading package:', {
-        ...formData,
-        email: user?.email,
-        uploadedBy: user?.id
+      await submitPackage({
+        name: formData.name,
+        description: formData.description,
+        version: formData.version,
+        license: formData.license,
+        githubRepo: formData.githubRepo,
+        jarFile: formData.jarFile
       });
-
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
 
       toast({
         title: "Package uploaded successfully",
@@ -72,9 +82,10 @@ const UploadPackage: React.FC<UploadPackageProps> = ({ onClose }) => {
       
       onClose();
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       toast({
         title: "Upload failed",
-        description: "Unable to upload package. Please try again.",
+        description: `Unable to upload package: ${errorMessage}`,
         variant: "destructive",
       });
     } finally {

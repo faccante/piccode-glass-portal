@@ -2,7 +2,7 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Package, LogOut, User, Settings } from 'lucide-react';
+import { Package, LogOut, User, Settings, Loader } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
 interface LayoutProps {
@@ -12,10 +12,10 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, profile, logout, loading } = useAuth();
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate('/');
   };
 
@@ -31,9 +31,18 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             </Link>
 
             <div className="flex items-center space-x-4">
-              {user ? (
+              {loading ? (
+                <Loader className="h-4 w-4 animate-spin text-muted-foreground" />
+              ) : user ? (
                 <>
-                  <span className="text-muted-foreground">Welcome, {user.email}</span>
+                  <span className="text-muted-foreground">
+                    Welcome, {profile?.full_name || user.email}
+                    {profile?.role === 'manager' && (
+                      <span className="ml-2 text-xs bg-primary/20 text-primary px-2 py-1 rounded">
+                        Manager
+                      </span>
+                    )}
+                  </span>
                   <Link to="/dashboard">
                     <Button variant="ghost" size="sm" className="glass-button">
                       <User className="h-4 w-4 mr-2" />
@@ -46,6 +55,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                       Account
                     </Button>
                   </Link>
+                  {profile?.role === 'manager' && (
+                    <Link to="/manager-dashboard">
+                      <Button variant="ghost" size="sm" className="glass-button">
+                        Manager
+                      </Button>
+                    </Link>
+                  )}
                   <Button onClick={handleLogout} variant="ghost" size="sm" className="glass-button">
                     <LogOut className="h-4 w-4 mr-2" />
                     Logout

@@ -9,7 +9,143 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      download_analytics: {
+        Row: {
+          downloaded_at: string
+          id: string
+          ip_address: unknown | null
+          package_id: string
+          user_agent: string | null
+        }
+        Insert: {
+          downloaded_at?: string
+          id?: string
+          ip_address?: unknown | null
+          package_id: string
+          user_agent?: string | null
+        }
+        Update: {
+          downloaded_at?: string
+          id?: string
+          ip_address?: unknown | null
+          package_id?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "download_analytics_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      packages: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          author_email: string
+          author_id: string
+          created_at: string
+          description: string
+          downloads: number
+          github_repo: string
+          id: string
+          jar_file_size: number | null
+          jar_file_url: string | null
+          license: string
+          name: string
+          status: string
+          updated_at: string
+          version: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          author_email: string
+          author_id: string
+          created_at?: string
+          description: string
+          downloads?: number
+          github_repo: string
+          id?: string
+          jar_file_size?: number | null
+          jar_file_url?: string | null
+          license: string
+          name: string
+          status?: string
+          updated_at?: string
+          version: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          author_email?: string
+          author_id?: string
+          created_at?: string
+          description?: string
+          downloads?: number
+          github_repo?: string
+          id?: string
+          jar_file_size?: number | null
+          jar_file_url?: string | null
+          license?: string
+          name?: string
+          status?: string
+          updated_at?: string
+          version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "packages_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "packages_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          bio: string | null
+          created_at: string
+          email: string
+          full_name: string | null
+          id: string
+          role: string
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          bio?: string | null
+          created_at?: string
+          email: string
+          full_name?: string | null
+          id: string
+          role?: string
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          bio?: string | null
+          created_at?: string
+          email?: string
+          full_name?: string | null
+          id?: string
+          role?: string
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
