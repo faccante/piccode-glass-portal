@@ -10,15 +10,15 @@ import { User, Mail, Globe, Save } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const Account: React.FC = () => {
-  const { user, updateProfile } = useAuth();
+  const { user, profile, updateProfile } = useAuth();
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   
   const [formData, setFormData] = useState({
-    name: user?.name || '',
+    full_name: profile?.full_name || '',
     email: user?.email || '',
-    bio: user?.bio || '',
-    website: user?.website || ''
+    bio: profile?.bio || '',
+    website: profile?.website || ''
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -26,7 +26,16 @@ const Account: React.FC = () => {
     setLoading(true);
 
     try {
-      updateProfile(formData);
+      const { error } = await updateProfile({
+        full_name: formData.full_name,
+        bio: formData.bio,
+        website: formData.website
+      });
+
+      if (error) {
+        throw new Error(error);
+      }
+
       toast({
         title: "Profile updated",
         description: "Your account information has been saved successfully.",
@@ -62,12 +71,12 @@ const Account: React.FC = () => {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="name">Display Name</Label>
+              <Label htmlFor="full_name">Display Name</Label>
               <Input
-                id="name"
+                id="full_name"
                 placeholder="Enter your display name"
-                value={formData.name}
-                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                value={formData.full_name}
+                onChange={(e) => setFormData(prev => ({ ...prev, full_name: e.target.value }))}
                 className="glass-card"
               />
             </div>

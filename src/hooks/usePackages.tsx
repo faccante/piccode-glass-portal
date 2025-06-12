@@ -60,7 +60,13 @@ export const usePackages = () => {
         return;
       }
       
-      setPackages(data || []);
+      // Type assertion to ensure status is properly typed
+      const typedPackages: Package[] = data?.map(pkg => ({
+        ...pkg,
+        status: pkg.status as 'pending' | 'reviewing' | 'approved' | 'rejected'
+      })) || [];
+      
+      setPackages(typedPackages);
     } catch (err) {
       console.error('Error fetching packages:', err);
       setError('Failed to fetch packages');
