@@ -3,22 +3,20 @@ import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Download, Github, Calendar, User } from 'lucide-react';
-import { Package } from '@/hooks/usePackages';
+import { Download, Github, Calendar, User, Package } from 'lucide-react';
+import { PackageNamespace } from '@/hooks/usePackages';
 
 interface PackageCardProps {
-  package: Package;
-  onDownload?: (packageId: string) => void;
-  onStatusChange?: (packageId: string, status: Package['status']) => void;
-  showActions?: boolean;
+  package: PackageNamespace;
+  onPackageClick?: (packageId: string) => void;
+  onStatusChange?: (packageId: string, status: PackageNamespace['status']) => void;
   isManager?: boolean;
 }
 
 const PackageCard: React.FC<PackageCardProps> = ({ 
   package: pkg, 
-  onDownload, 
+  onPackageClick, 
   onStatusChange, 
-  showActions = true,
   isManager = false 
 }) => {
   const getStatusColor = (status: string) => {
@@ -39,22 +37,29 @@ const PackageCard: React.FC<PackageCardProps> = ({
     });
   };
 
-  const handleDownload = () => {
-    if (onDownload) {
-      onDownload(pkg.id);
+  const handleCardClick = () => {
+    if (onPackageClick) {
+      onPackageClick(pkg.id);
     }
   };
 
-  const openGithubRepo = () => {
+  const openGithubRepo = (e: React.MouseEvent) => {
+    e.stopPropagation();
     window.open(pkg.github_repo, '_blank');
   };
 
   return (
-    <Card className="glass-card h-full flex flex-col">
+    <Card 
+      className="glass-card h-full flex flex-col cursor-pointer hover:bg-white/5 transition-colors" 
+      onClick={handleCardClick}
+    >
       <CardHeader>
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            <CardTitle className="text-xl mb-2">{pkg.name}</CardTitle>
+            <CardTitle className="text-xl mb-2 flex items-center gap-2">
+              <Package className="h-5 w-5" />
+              {pkg.name}
+            </CardTitle>
             <CardDescription className="text-sm text-muted-foreground">
               {pkg.description}
             </CardDescription>
@@ -79,56 +84,50 @@ const PackageCard: React.FC<PackageCardProps> = ({
           </div>
 
           <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Version: {pkg.version}</span>
+            <span className="text-muted-foreground">Latest: v{pkg.latest_version || 'N/A'}</span>
             <span className="text-muted-foreground">License: {pkg.license}</span>
           </div>
 
           <div className="flex items-center gap-1 text-sm text-muted-foreground">
             <Download className="h-4 w-4" />
-            <span>{pkg.downloads} downloads</span>
+            <span>{pkg.total_downloads} downloads</span>
           </div>
         </div>
 
-        {showActions && (
-          <div className="flex gap-2 mt-4">
-            {pkg.status === 'approved' && (
+        <div className="flex gap-2 mt-4">
+          <Button
+            onClick={openGithubRepo}
+            variant="ghost"
+            className="glass-button flex-1"
+          >
+            <Github className="h-4 w-4 mr-2" />
+            GitHub
+          </Button>
+          
+          {isManager && onStatusChange && pkg.status !== 'approved' && (
+            <>
               <Button
-                onClick={handleDownload}
-                className="flex-1 bg-primary/20 hover:bg-primary/30 border border-primary/50"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onStatusChange(pkg.id, 'approved');
+                }}
+                className="flex-1 bg-green-500/20 hover:bg-green-500/30 border border-green-500/50"
               >
-                <Download className="h-4 w-4 mr-2" />
-                Download
+                Approve
               </Button>
-            )}
-            
-            <Button
-              onClick={openGithubRepo}
-              variant="ghost"
-              className="glass-button"
-            >
-              <Github className="h-4 w-4 mr-2" />
-              GitHub
-            </Button>
-          </div>
-        )}
-
-        {isManager && onStatusChange && pkg.status !== 'approved' && (
-          <div className="flex gap-2 mt-4">
-            <Button
-              onClick={() => onStatusChange(pkg.id, 'approved')}
-              className="flex-1 bg-green-500/20 hover:bg-green-500/30 border border-green-500/50"
-            >
-              Approve
-            </Button>
-            <Button
-              onClick={() => onStatusChange(pkg.id, 'rejected')}
-              variant="ghost"
-              className="flex-1 glass-button text-red-400 hover:text-red-300"
-            >
-              Reject
-            </Button>
-          </div>
-        )}
+              <Button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onStatusChange(pkg.id, 'rejected');
+                }}
+                variant="ghost"
+                className="flex-1 glass-button text-red-400 hover:text-red-300"
+              >
+                Reject
+              </Button>
+            </>
+          )}
+        </div>
       </CardContent>
     </Card>
   );

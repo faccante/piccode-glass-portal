@@ -1,33 +1,42 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 
-export interface Package {
+export interface PackageNamespace {
   id: string;
   name: string;
   description: string;
-  version: string;
   license: string;
   github_repo: string;
   author_id: string;
   author_email: string;
-  jar_file_url?: string;
-  jar_file_size?: number;
   status: 'pending' | 'reviewing' | 'approved' | 'rejected';
-  downloads: number;
+  total_downloads: number;
   created_at: string;
   updated_at: string;
   approved_at?: string;
   approved_by?: string;
-  // Join with profiles table
   profiles?: {
     full_name?: string;
     email: string;
   };
+  latest_version?: string;
+  versions?: PackageVersion[];
+}
+
+export interface PackageVersion {
+  id: string;
+  package_namespace_id: string;
+  version: string;
+  jar_file_url?: string;
+  jar_file_size?: number;
+  downloads: number;
+  created_at: string;
 }
 
 export const usePackages = () => {
-  const [packages, setPackages] = useState<Package[]>([]);
+  const [packages, setPackages] = useState<PackageNamespace[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { user, profile } = useAuth();
@@ -38,7 +47,7 @@ export const usePackages = () => {
       setError(null);
       
       let query = supabase
-        .from('packages')
+        .from('package_namespaces')
         .select(`
           *,
           profiles!author_id (
@@ -52,25 +61,72 @@ export const usePackages = () => {
         query = query.eq('status', 'approved');
       }
 
-      const { data, error: fetchError } = await query.order('created_at', { ascending: false });
+      const { data, error: fetchError } = await query.order('total_downloads', { ascending: false });
       
       if (fetchError) {
         setError(fetchError.message);
         return;
       }
       
-      // Type assertion to ensure status is properly typed
-      const typedPackages: Package[] = data?.map(pkg => ({
-        ...pkg,
-        status: pkg.status as 'pending' | 'reviewing' | 'approved' | 'rejected'
-      })) || [];
+      // Fetch latest version for each package
+      const packagesWithVersions = await Promise.all(
+        (data || []).map(async (pkg) => {
+          const { data: versions } = await supabase
+            .from('package_versions')
+            .select('*')
+            .eq('package_namespace_id', pkg.id)
+            .order('created_at', { ascending: false })
+            .limit(1);
+
+          return {
+            ...pkg,
+            latest_version: versions?.[0]?.version,
+            status: pkg.status as 'pending' | 'reviewing' | 'approved' | 'rejected'
+          };
+        })
+      );
       
-      setPackages(typedPackages);
+      setPackages(packagesWithVersions);
     } catch (err) {
       console.error('Error fetching packages:', err);
       setError('Failed to fetch packages');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const getPackageDetails = async (packageId: string) => {
+    try {
+      const { data: packageData, error: packageError } = await supabase
+        .from('package_namespaces')
+        .select(`
+          *,
+          profiles!author_id (
+            full_name,
+            email
+          )
+        `)
+        .eq('id', packageId)
+        .single();
+
+      if (packageError) throw packageError;
+
+      const { data: versions, error: versionsError } = await supabase
+        .from('package_versions')
+        .select('*')
+        .eq('package_namespace_id', packageId)
+        .order('created_at', { ascending: false });
+
+      if (versionsError) throw versionsError;
+
+      return {
+        ...packageData,
+        versions,
+        status: packageData.status as 'pending' | 'reviewing' | 'approved' | 'rejected'
+      };
+    } catch (error) {
+      console.error('Error fetching package details:', error);
+      throw error;
     }
   };
 
@@ -87,36 +143,99 @@ export const usePackages = () => {
     }
 
     try {
-      const { data, error } = await supabase
-        .from('packages')
-        .insert({
-          name: packageData.name,
-          description: packageData.description,
-          version: packageData.version,
-          license: packageData.license,
-          github_repo: packageData.githubRepo,
-          author_id: user.id,
-          author_email: user.email || '',
-          jar_file_size: packageData.jarFile.size
-        })
-        .select()
+      // Check if package namespace already exists
+      const { data: existingPackage } = await supabase
+        .from('package_namespaces')
+        .select('id, author_id')
+        .eq('name', packageData.name)
         .single();
 
-      if (error) {
-        throw new Error(error.message);
+      let namespaceId: string;
+
+      if (existingPackage) {
+        // Package exists, check if user is the author
+        if (existingPackage.author_id !== user.id) {
+          throw new Error('Package name already exists and belongs to another user');
+        }
+        namespaceId = existingPackage.id;
+
+        // Check if version already exists
+        const { data: existingVersion } = await supabase
+          .from('package_versions')
+          .select('id')
+          .eq('package_namespace_id', namespaceId)
+          .eq('version', packageData.version)
+          .single();
+
+        if (existingVersion) {
+          throw new Error('This version already exists for this package');
+        }
+      } else {
+        // Create new package namespace
+        const { data: newPackage, error: namespaceError } = await supabase
+          .from('package_namespaces')
+          .insert({
+            name: packageData.name,
+            description: packageData.description,
+            license: packageData.license,
+            github_repo: packageData.githubRepo,
+            author_id: user.id,
+            author_email: user.email || ''
+          })
+          .select()
+          .single();
+
+        if (namespaceError) throw namespaceError;
+        namespaceId = newPackage.id;
       }
+
+      // Add new version
+      const { error: versionError } = await supabase
+        .from('package_versions')
+        .insert({
+          package_namespace_id: namespaceId,
+          version: packageData.version,
+          jar_file_size: packageData.jarFile.size
+        });
+
+      if (versionError) throw versionError;
 
       // Refresh packages list
       await fetchPackages();
       
-      return data;
+      return { success: true };
     } catch (error) {
       console.error('Error submitting package:', error);
       throw error;
     }
   };
 
-  const updatePackageStatus = async (packageId: string, status: Package['status'], approvedBy?: string) => {
+  const updatePackage = async (packageId: string, updateData: {
+    description?: string;
+    license?: string;
+    github_repo?: string;
+  }) => {
+    if (!user || !profile) {
+      throw new Error('Not authenticated');
+    }
+
+    try {
+      const { error } = await supabase
+        .from('package_namespaces')
+        .update(updateData)
+        .eq('id', packageId)
+        .eq('author_id', user.id);
+
+      if (error) throw error;
+
+      await fetchPackages();
+    } catch (error) {
+      console.error('Error updating package:', error);
+      throw error;
+    }
+  };
+
+  const updatePackageStatus = async (packageId: string, status: PackageNamespace['status']) => {
     if (!user || !profile || profile.role !== 'manager') {
       throw new Error('Not authorized');
     }
@@ -133,15 +252,12 @@ export const usePackages = () => {
       }
 
       const { error } = await supabase
-        .from('packages')
+        .from('package_namespaces')
         .update(updateData)
         .eq('id', packageId);
 
-      if (error) {
-        throw new Error(error.message);
-      }
+      if (error) throw error;
 
-      // Refresh packages list
       await fetchPackages();
     } catch (error) {
       console.error('Error updating package status:', error);
@@ -149,24 +265,18 @@ export const usePackages = () => {
     }
   };
 
-  const recordDownload = async (packageId: string) => {
+  const recordDownload = async (versionId: string) => {
     try {
       // Record download analytics
       await supabase
         .from('download_analytics')
         .insert({
-          package_id: packageId,
-          ip_address: null, // Could be populated server-side
+          package_version_id: versionId,
           user_agent: navigator.userAgent
         });
 
-      // Increment download count
-      await supabase
-        .from('packages')
-        .update({ 
-          downloads: packages.find(p => p.id === packageId)?.downloads + 1 || 1 
-        })
-        .eq('id', packageId);
+      // Increment version download count
+      await supabase.rpc('increment_version_downloads', { version_id: versionId });
 
       // Refresh packages to show updated count
       await fetchPackages();
@@ -176,17 +286,41 @@ export const usePackages = () => {
     }
   };
 
+  const deletePackage = async (packageId: string) => {
+    if (!user || !profile) {
+      throw new Error('Not authenticated');
+    }
+
+    try {
+      const { error } = await supabase
+        .from('package_namespaces')
+        .delete()
+        .eq('id', packageId)
+        .eq('author_id', user.id);
+
+      if (error) throw error;
+
+      await fetchPackages();
+    } catch (error) {
+      console.error('Error deleting package:', error);
+      throw error;
+    }
+  };
+
   useEffect(() => {
     fetchPackages();
-  }, [profile]); // Refetch when profile changes (role might affect visibility)
+  }, [profile]);
 
   return {
     packages,
     loading,
     error,
     fetchPackages,
+    getPackageDetails,
     submitPackage,
+    updatePackage,
     updatePackageStatus,
-    recordDownload
+    recordDownload,
+    deletePackage
   };
 };

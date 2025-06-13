@@ -2,51 +2,25 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Search } from 'lucide-react';
-import UploadPackage from '@/components/UploadPackage';
+import { Search } from 'lucide-react';
 import PackageGrid from '@/components/PackageGrid';
 import { useAuth } from '@/hooks/useAuth';
 import { usePackages } from '@/hooks/usePackages';
-import { useToast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
 
 const Home = () => {
-  const [showUpload, setShowUpload] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const { user, profile } = useAuth();
   const { packages, loading, error, recordDownload } = usePackages();
-  const { toast } = useToast();
+  const navigate = useNavigate();
 
   const filteredPackages = packages.filter(pkg =>
     pkg.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     pkg.description.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleUploadClick = () => {
-    if (!user) {
-      toast({
-        title: "Authentication required",
-        description: "Please log in to upload packages",
-        variant: "destructive",
-      });
-      return;
-    }
-    setShowUpload(true);
-  };
-
-  const handleDownload = async (packageId: string) => {
-    try {
-      await recordDownload(packageId);
-      toast({
-        title: "Download started",
-        description: "Package download has been recorded",
-      });
-    } catch (error) {
-      toast({
-        title: "Download failed",
-        description: "Unable to process download request",
-        variant: "destructive",
-      });
-    }
+  const handlePackageClick = (packageId: string) => {
+    navigate(`/package/${packageId}`);
   };
 
   return (
@@ -60,19 +34,6 @@ const Home = () => {
           <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
             Discover, share, and manage PiccodeScript packages. Build faster with community-driven libraries.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button 
-              onClick={handleUploadClick}
-              className="bg-primary/20 hover:bg-primary/30 border border-primary/50"
-              size="lg"
-            >
-              <Plus className="h-5 w-5 mr-2" />
-              Upload Package
-            </Button>
-            <Button variant="ghost" size="lg" className="glass-button">
-              Browse Packages
-            </Button>
-          </div>
         </div>
       </section>
 
@@ -97,7 +58,7 @@ const Home = () => {
         </div>
         <div className="glass-card p-6 text-center">
           <div className="text-3xl font-bold text-primary mb-2">
-            {packages.reduce((sum, pkg) => sum + pkg.downloads, 0)}
+            {packages.reduce((sum, pkg) => sum + pkg.total_downloads, 0)}
           </div>
           <div className="text-muted-foreground">Total Downloads</div>
         </div>
@@ -113,7 +74,7 @@ const Home = () => {
       <section>
         <div className="flex items-center justify-between mb-8">
           <h2 className="text-3xl font-bold">
-            {searchTerm ? `Search Results (${filteredPackages.length})` : 'Latest Packages'}
+            {searchTerm ? `Search Results (${filteredPackages.length})` : 'Most Downloaded Packages'}
           </h2>
         </div>
 
@@ -121,15 +82,10 @@ const Home = () => {
           packages={filteredPackages}
           loading={loading}
           error={error}
-          onDownload={handleDownload}
+          onPackageClick={handlePackageClick}
           isManager={profile?.role === 'manager'}
         />
       </section>
-
-      {/* Upload Modal */}
-      {showUpload && (
-        <UploadPackage onClose={() => setShowUpload(false)} />
-      )}
     </div>
   );
 };

@@ -1,14 +1,14 @@
 
 import React from 'react';
-import { Package } from '@/hooks/usePackages';
+import { PackageNamespace } from '@/hooks/usePackages';
 import PackageCard from './PackageCard';
 
 interface PackageGridProps {
-  packages: Package[];
+  packages: PackageNamespace[];
   loading: boolean;
   error: string | null;
-  onDownload?: (packageId: string) => void;
-  onStatusChange?: (packageId: string, status: Package['status']) => void;
+  onPackageClick?: (packageId: string) => void;
+  onStatusChange?: (packageId: string, status: PackageNamespace['status']) => void;
   isManager?: boolean;
 }
 
@@ -16,7 +16,7 @@ const PackageGrid: React.FC<PackageGridProps> = ({
   packages,
   loading,
   error,
-  onDownload,
+  onPackageClick,
   onStatusChange,
   isManager = false
 }) => {
@@ -70,7 +70,7 @@ const PackageGrid: React.FC<PackageGridProps> = ({
         <PackageCard
           key={pkg.id}
           package={pkg}
-          onDownload={onDownload}
+          onPackageClick={onPackageClick}
           onStatusChange={onStatusChange}
           isManager={isManager}
         />

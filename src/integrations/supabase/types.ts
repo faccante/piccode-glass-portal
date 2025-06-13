@@ -41,6 +41,107 @@ export type Database = {
           },
         ]
       }
+      package_namespaces: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          author_email: string
+          author_id: string
+          created_at: string
+          description: string
+          github_repo: string
+          id: string
+          license: string
+          name: string
+          status: string
+          total_downloads: number
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          author_email: string
+          author_id: string
+          created_at?: string
+          description: string
+          github_repo: string
+          id?: string
+          license: string
+          name: string
+          status?: string
+          total_downloads?: number
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          author_email?: string
+          author_id?: string
+          created_at?: string
+          description?: string
+          github_repo?: string
+          id?: string
+          license?: string
+          name?: string
+          status?: string
+          total_downloads?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "package_namespaces_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "package_namespaces_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      package_versions: {
+        Row: {
+          created_at: string
+          downloads: number
+          id: string
+          jar_file_size: number | null
+          jar_file_url: string | null
+          package_namespace_id: string
+          version: string
+        }
+        Insert: {
+          created_at?: string
+          downloads?: number
+          id?: string
+          jar_file_size?: number | null
+          jar_file_url?: string | null
+          package_namespace_id: string
+          version: string
+        }
+        Update: {
+          created_at?: string
+          downloads?: number
+          id?: string
+          jar_file_size?: number | null
+          jar_file_url?: string | null
+          package_namespace_id?: string
+          version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "package_versions_package_namespace_id_fkey"
+            columns: ["package_namespace_id"]
+            isOneToOne: false
+            referencedRelation: "package_namespaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       packages: {
         Row: {
           approved_at: string | null
