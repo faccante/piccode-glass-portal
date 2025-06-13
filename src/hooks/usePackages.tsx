@@ -275,8 +275,29 @@ export const usePackages = () => {
           user_agent: navigator.userAgent
         });
 
-      // Increment version download count
-      await supabase.rpc('increment_version_downloads', { version_id: versionId });
+      // Update version download count
+      const { error: updateError } = await supabase
+        .from('package_versions')
+        .update({ downloads: supabase.sql`downloads + 1` })
+        .eq('id', versionId);
+
+      if (updateError) {
+        console.error('Error updating download count:', updateError);
+      }
+
+      // Update namespace total downloads
+      const { data: version } = await supabase
+        .from('package_versions')
+        .select('package_namespace_id')
+        .eq('id', versionId)
+        .single();
+
+      if (version) {
+        await supabase
+          .from('package_namespaces')
+          .update({ total_downloads: supabase.sql`total_downloads + 1` })
+          .eq('id', version.package_namespace_id);
+      }
 
       // Refresh packages to show updated count
       await fetchPackages();

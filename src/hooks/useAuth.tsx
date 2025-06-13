@@ -17,7 +17,7 @@ interface AuthContextType {
   profile: Profile | null;
   session: Session | null;
   login: (email: string, password: string) => Promise<{ error?: string }>;
-  signup: (email: string, password: string, fullName?: string) => Promise<{ error?: string }>;
+  signup: (email: string, password: string, fullName?: string) => Promise<{ error?: string; needsConfirmation?: boolean }>;
   logout: () => Promise<void>;
   updateProfile: (data: Partial<Profile>) => Promise<{ error?: string }>;
   resetPassword: (email: string) => Promise<{ error?: string }>;
@@ -41,29 +41,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Fetch user profile
-          setTimeout(async () => {
-            try {
-              const { data: profileData, error } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', session.user.id)
-                .single();
-              
-              if (error) {
-                console.error('Error fetching profile:', error);
-              } else {
-                // Type assertion to ensure role is properly typed
-                const typedProfile: Profile = {
-                  ...profileData,
-                  role: profileData.role as 'user' | 'manager'
-                };
-                setProfile(typedProfile);
+          // Only fetch profile for confirmed users
+          if (session.user.email_confirmed_at) {
+            setTimeout(async () => {
+              try {
+                const { data: profileData, error } = await supabase
+                  .from('profiles')
+                  .select('*')
+                  .eq('id', session.user.id)
+                  .single();
+                
+                if (error) {
+                  console.error('Error fetching profile:', error);
+                } else {
+                  const typedProfile: Profile = {
+                    ...profileData,
+                    role: profileData.role as 'user' | 'manager'
+                  };
+                  setProfile(typedProfile);
+                }
+              } catch (error) {
+                console.error('Error in profile fetch:', error);
               }
-            } catch (error) {
-              console.error('Error in profile fetch:', error);
-            }
-          }, 0);
+            }, 0);
+          }
         } else {
           setProfile(null);
         }
@@ -108,7 +109,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(true);
       const redirectUrl = `${window.location.origin}/`;
       
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -121,6 +122,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (error) {
         return { error: error.message };
+      }
+      
+      // Check if user needs email confirmation
+      if (data.user && !data.user.email_confirmed_at) {
+        return { needsConfirmation: true };
       }
       
       return {};

@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { Package, Mail, Lock } from 'lucide-react';
+import { Package, Mail, Lock, CheckCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const Signup: React.FC = () => {
@@ -14,6 +14,7 @@ const Signup: React.FC = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [signupComplete, setSignupComplete] = useState(false);
   const { signup } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -33,19 +34,25 @@ const Signup: React.FC = () => {
     setLoading(true);
 
     try {
-      const success = await signup(email, password);
-      if (success) {
+      const result = await signup(email, password);
+      if (result.error) {
+        toast({
+          title: "Signup failed",
+          description: result.error,
+          variant: "destructive",
+        });
+      } else if (result.needsConfirmation) {
+        setSignupComplete(true);
+        toast({
+          title: "Check your email",
+          description: "We've sent you a confirmation link. Please check your email to activate your account.",
+        });
+      } else {
         toast({
           title: "Account created successfully",
           description: "Welcome to PiccodeScript Registry!",
         });
         navigate('/dashboard');
-      } else {
-        toast({
-          title: "Signup failed",
-          description: "Unable to create account. Please try again.",
-          variant: "destructive",
-        });
       }
     } catch (error) {
       toast({
@@ -57,6 +64,48 @@ const Signup: React.FC = () => {
       setLoading(false);
     }
   };
+
+  if (signupComplete) {
+    return (
+      <div className="min-h-[80vh] flex items-center justify-center">
+        <Card className="glass-card w-full max-w-md">
+          <CardHeader className="text-center">
+            <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
+            <CardTitle className="text-2xl gradient-text">Check Your Email</CardTitle>
+            <CardDescription>
+              We've sent a confirmation link to {email}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="text-center">
+            <p className="text-sm text-muted-foreground mb-6">
+              Please check your email and click the confirmation link to activate your account.
+              You won't be able to log in until your email is confirmed.
+            </p>
+            <div className="space-y-3">
+              <Button 
+                onClick={() => setSignupComplete(false)}
+                variant="ghost" 
+                className="w-full glass-button"
+              >
+                Back to Signup
+              </Button>
+              <div className="text-center">
+                <p className="text-sm text-muted-foreground">
+                  Already confirmed?{' '}
+                  <Link 
+                    to="/login" 
+                    className="text-primary hover:text-primary/80 transition-colors"
+                  >
+                    Sign in
+                  </Link>
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-[80vh] flex items-center justify-center">

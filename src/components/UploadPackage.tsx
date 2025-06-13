@@ -1,15 +1,16 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Upload, File, Github } from 'lucide-react';
+import { Upload, File, Github, Info } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { usePackages } from '@/hooks/usePackages';
+import { supabase } from '@/integrations/supabase/client';
 
 interface UploadPackageProps {
   onClose: () => void;
@@ -24,10 +25,58 @@ const UploadPackage: React.FC<UploadPackageProps> = ({ onClose }) => {
     githubRepo: '',
     jarFile: null as File | null
   });
+  const [existingVersions, setExistingVersions] = useState<string[]>([]);
+  const [isExistingPackage, setIsExistingPackage] = useState(false);
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
   const { submitPackage } = usePackages();
   const { toast } = useToast();
+
+  // Check for existing package when name changes
+  useEffect(() => {
+    const checkExistingPackage = async () => {
+      if (!formData.name.trim() || !user) return;
+
+      try {
+        const { data: existingPackage } = await supabase
+          .from('package_namespaces')
+          .select('id, author_id')
+          .eq('name', formData.name.trim())
+          .single();
+
+        if (existingPackage) {
+          if (existingPackage.author_id === user.id) {
+            setIsExistingPackage(true);
+            
+            // Fetch existing versions
+            const { data: versions } = await supabase
+              .from('package_versions')
+              .select('version')
+              .eq('package_namespace_id', existingPackage.id)
+              .order('created_at', { ascending: false });
+
+            setExistingVersions(versions?.map(v => v.version) || []);
+          } else {
+            setIsExistingPackage(false);
+            setExistingVersions([]);
+            toast({
+              title: "Package name unavailable",
+              description: "This package name is already taken by another user.",
+              variant: "destructive",
+            });
+          }
+        } else {
+          setIsExistingPackage(false);
+          setExistingVersions([]);
+        }
+      } catch (error) {
+        console.error('Error checking existing package:', error);
+      }
+    };
+
+    const timeoutId = setTimeout(checkExistingPackage, 500);
+    return () => clearTimeout(timeoutId);
+  }, [formData.name, user]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -58,6 +107,26 @@ const UploadPackage: React.FC<UploadPackageProps> = ({ onClose }) => {
       toast({
         title: "Authentication required",
         description: "Please log in to upload packages",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check if user's email is confirmed
+    if (!user.email_confirmed_at) {
+      toast({
+        title: "Email not confirmed",
+        description: "Please confirm your email address before uploading packages",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check if version already exists
+    if (existingVersions.includes(formData.version)) {
+      toast({
+        title: "Version already exists",
+        description: "This version already exists for this package. Please use a different version number.",
         variant: "destructive",
       });
       return;
@@ -126,6 +195,12 @@ const UploadPackage: React.FC<UploadPackageProps> = ({ onClose }) => {
                 className="glass-card"
                 required
               />
+              {isExistingPackage && (
+                <div className="flex items-center gap-2 text-sm text-blue-400">
+                  <Info className="h-4 w-4" />
+                  Adding new version to existing package
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -138,8 +213,34 @@ const UploadPackage: React.FC<UploadPackageProps> = ({ onClose }) => {
                 className="glass-card"
                 required
               />
+              {existingVersions.length > 0 && (
+                <div className="text-xs text-muted-foreground">
+                  Existing versions: {existingVersions.join(', ')}
+                </div>
+              )}
             </div>
           </div>
+
+          {existingVersions.length > 0 && (
+            <div className="space-y-2">
+              <Label>Existing Versions (Read-only)</Label>
+              <Select disabled>
+                <SelectTrigger className="glass-card opacity-60">
+                  <SelectValue placeholder="Previous versions (for reference only)" />
+                </SelectTrigger>
+                <SelectContent>
+                  {existingVersions.map((version) => (
+                    <SelectItem key={version} value={version}>
+                      v{version}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <div className="text-xs text-muted-foreground">
+                This dropdown shows existing versions for reference. You cannot select or modify them.
+              </div>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="description">Description *</Label>
@@ -150,13 +251,22 @@ const UploadPackage: React.FC<UploadPackageProps> = ({ onClose }) => {
               onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
               className="glass-card min-h-20"
               required
+              disabled={isExistingPackage}
             />
+            {isExistingPackage && (
+              <div className="text-xs text-muted-foreground">
+                Description is inherited from the existing package
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="license">License *</Label>
-              <Select onValueChange={(value) => setFormData(prev => ({ ...prev, license: value }))}>
+              <Select 
+                onValueChange={(value) => setFormData(prev => ({ ...prev, license: value }))}
+                disabled={isExistingPackage}
+              >
                 <SelectTrigger className="glass-card">
                   <SelectValue placeholder="Select a license" />
                 </SelectTrigger>
@@ -168,6 +278,11 @@ const UploadPackage: React.FC<UploadPackageProps> = ({ onClose }) => {
                   ))}
                 </SelectContent>
               </Select>
+              {isExistingPackage && (
+                <div className="text-xs text-muted-foreground">
+                  License is inherited from the existing package
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -181,8 +296,14 @@ const UploadPackage: React.FC<UploadPackageProps> = ({ onClose }) => {
                   onChange={(e) => setFormData(prev => ({ ...prev, githubRepo: e.target.value }))}
                   className="pl-10 glass-card"
                   required
+                  disabled={isExistingPackage}
                 />
               </div>
+              {isExistingPackage && (
+                <div className="text-xs text-muted-foreground">
+                  GitHub repository is inherited from the existing package
+                </div>
+              )}
             </div>
           </div>
 
