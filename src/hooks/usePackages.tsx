@@ -267,22 +267,30 @@ export const usePackages = () => {
 
   const recordDownload = async (versionId: string) => {
     try {
-      // Record download analytics
+      // Record download analytics using the correct column name 'package_id'
       await supabase
         .from('download_analytics')
         .insert({
-          package_version_id: versionId,
+          package_id: versionId,
           user_agent: navigator.userAgent
         });
 
-      // Update version download count
-      const { error: updateError } = await supabase
+      // Update version download count using RPC or direct increment
+      const { data: currentVersion } = await supabase
         .from('package_versions')
-        .update({ downloads: supabase.sql`downloads + 1` })
-        .eq('id', versionId);
+        .select('downloads')
+        .eq('id', versionId)
+        .single();
 
-      if (updateError) {
-        console.error('Error updating download count:', updateError);
+      if (currentVersion) {
+        const { error: updateError } = await supabase
+          .from('package_versions')
+          .update({ downloads: currentVersion.downloads + 1 })
+          .eq('id', versionId);
+
+        if (updateError) {
+          console.error('Error updating download count:', updateError);
+        }
       }
 
       // Update namespace total downloads
@@ -293,10 +301,18 @@ export const usePackages = () => {
         .single();
 
       if (version) {
-        await supabase
+        const { data: currentNamespace } = await supabase
           .from('package_namespaces')
-          .update({ total_downloads: supabase.sql`total_downloads + 1` })
-          .eq('id', version.package_namespace_id);
+          .select('total_downloads')
+          .eq('id', version.package_namespace_id)
+          .single();
+
+        if (currentNamespace) {
+          await supabase
+            .from('package_namespaces')
+            .update({ total_downloads: currentNamespace.total_downloads + 1 })
+            .eq('id', version.package_namespace_id);
+        }
       }
 
       // Refresh packages to show updated count
