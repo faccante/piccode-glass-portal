@@ -79,21 +79,22 @@ const PublicPackageInstallChart: React.FC<PublicPackageInstallChartProps> = ({ p
     <div className="h-64">
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data}>
-          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
           <XAxis 
             dataKey="date" 
-            stroke="rgba(255,255,255,0.7)"
+            stroke="hsl(var(--muted-foreground))"
             fontSize={12}
           />
           <YAxis 
-            stroke="rgba(255,255,255,0.7)"
+            stroke="hsl(var(--muted-foreground))"
             fontSize={12}
           />
           <Tooltip 
             contentStyle={{
-              backgroundColor: 'rgba(0,0,0,0.8)',
-              border: '1px solid rgba(255,255,255,0.2)',
-              borderRadius: '8px'
+              backgroundColor: 'hsl(var(--background))',
+              border: '1px solid hsl(var(--border))',
+              borderRadius: '8px',
+              color: 'hsl(var(--foreground))'
             }}
           />
           <Line 
