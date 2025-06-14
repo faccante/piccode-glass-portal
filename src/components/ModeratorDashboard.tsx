@@ -130,20 +130,16 @@ const ModeratorDashboard: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="review-packages" className="space-y-8">
-          <Card className="bg-white/70 backdrop-blur-sm border border-gray-200">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-gray-900">
-                <Shield className="h-5 w-5 text-blue-600" />
-                Package Review Center
-              </CardTitle>
-              <CardDescription>
-                Review and approve package submissions from other users
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <PackageManagerList />
-            </CardContent>
-          </Card>
+          <div className="flex items-center gap-2 mb-6">
+            <Shield className="h-5 w-5 text-blue-600" />
+            <h2 className="text-xl font-semibold text-gray-900">Package Review Center</h2>
+          </div>
+          <p className="text-gray-600 mb-6">
+            Review and approve package submissions from other users
+          </p>
+          
+          {/* Package Manager List with full functionality for moderators */}
+          <PackageManagerList />
         </TabsContent>
       </Tabs>
     </div>

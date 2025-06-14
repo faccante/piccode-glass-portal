@@ -51,7 +51,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             )}
 
             {/* Desktop navigation */}
-            <div className="flex items-center space-x-3 desktop-nav-actions">
+            <div className="flex items-center space-x-3 mobile-header-actions">
               <Button variant="ghost" size="sm" className="glass-button">
                 <Github className="h-4 w-4 mr-2" />
                 GitHub
