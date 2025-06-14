@@ -17,9 +17,9 @@ export interface PublicPackage {
   latest_version?: string;
   profiles?: {
     full_name?: string;
-    email: string;
+    email?: string;
     avatar_url?: string;
-  };
+  } | null;
 }
 
 export const usePublicPackages = () => {
@@ -71,7 +71,7 @@ export const usePublicPackages = () => {
       );
 
       console.log('Final packages with versions:', packagesWithVersions);
-      return packagesWithVersions as PublicPackage[];
+      return packagesWithVersions;
     },
   });
 
