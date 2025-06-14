@@ -3,77 +3,79 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Light mode design system inspired by Maven Central */
+/* Enhanced light mode and Gruvbox dark mode design system */
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Enhanced light mode - better contrast and visibility */
+    --background: 0 0% 98%;
+    --foreground: 220 13% 18%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 220 13% 18%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 220 13% 18%;
 
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 220 100% 50%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222.2 84% 4.9%;
+    --secondary: 220 13% 95%;
+    --secondary-foreground: 220 13% 18%;
 
-    --muted: 210 40% 96%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 220 13% 95%;
+    --muted-foreground: 220 9% 46%;
 
-    --accent: 210 40% 96%;
-    --accent-foreground: 222.2 84% 4.9%;
+    --accent: 220 13% 95%;
+    --accent-foreground: 220 13% 18%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
+    --border: 220 13% 87%;
+    --input: 220 13% 91%;
+    --ring: 220 100% 50%;
 
     --radius: 0.5rem;
 
-    --glass-bg: rgba(255, 255, 255, 0.85);
-    --glass-border: rgba(0, 0, 0, 0.1);
-    --glass-shadow: rgba(0, 0, 0, 0.1);
+    --glass-bg: rgba(255, 255, 255, 0.90);
+    --glass-border: rgba(0, 0, 0, 0.15);
+    --glass-shadow: rgba(0, 0, 0, 0.08);
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    /* Gruvbox dark theme colors */
+    --background: 24 13% 8%;      /* #1d2021 gruvbox dark0 */
+    --foreground: 43 14% 83%;     /* #ebdbb2 gruvbox light1 */
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    --card: 24 13% 10%;           /* #282828 gruvbox dark0_hard */
+    --card-foreground: 43 14% 83%;
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 24 13% 10%;
+    --popover-foreground: 43 14% 83%;
 
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 84% 4.9%;
+    --primary: 45 85% 58%;        /* #fabd2f gruvbox yellow */
+    --primary-foreground: 24 13% 8%;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 32 10% 20%;      /* #3c3836 gruvbox dark2 */
+    --secondary-foreground: 43 14% 83%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 32 10% 20%;
+    --muted-foreground: 40 15% 52%; /* #a89984 gruvbox light4 */
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 142 25% 50%;        /* #689d6a gruvbox aqua */
+    --accent-foreground: 43 14% 83%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 4 89% 58%;     /* #fb4934 gruvbox red */
+    --destructive-foreground: 43 14% 83%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 94.1%;
+    --border: 32 10% 20%;         /* #3c3836 gruvbox dark2 */
+    --input: 32 10% 20%;
+    --ring: 45 85% 58%;           /* #fabd2f gruvbox yellow */
 
-    --glass-bg: rgba(15, 23, 42, 0.85);
-    --glass-border: rgba(255, 255, 255, 0.1);
-    --glass-shadow: rgba(0, 0, 0, 0.3);
+    --glass-bg: rgba(40, 40, 40, 0.90);
+    --glass-border: rgba(235, 219, 178, 0.15);
+    --glass-shadow: rgba(0, 0, 0, 0.4);
   }
 }
 
@@ -84,35 +86,37 @@
 
   body {
     @apply bg-background text-foreground;
+    /* Enhanced light mode gradient */
     background: linear-gradient(135deg, 
-      hsl(210, 40%, 99%) 0%, 
-      hsl(210, 40%, 96%) 100%);
+      hsl(220, 13%, 99%) 0%, 
+      hsl(220, 13%, 96%) 100%);
     min-height: 100vh;
   }
 
   .dark body {
+    /* Gruvbox dark gradient */
     background: linear-gradient(135deg, 
-      hsl(222.2, 84%, 4.9%) 0%, 
-      hsl(217.2, 32.6%, 17.5%) 100%);
+      hsl(24, 13%, 8%) 0%, 
+      hsl(32, 10%, 12%) 100%);
   }
 }
 
 @layer components {
   .glass-card {
-    @apply backdrop-blur-sm border shadow-sm;
+    @apply backdrop-blur-sm border-2 shadow-md;
     background: var(--glass-bg);
     border-color: var(--glass-border);
-    box-shadow: 0 1px 3px var(--glass-shadow);
+    box-shadow: 0 4px 6px var(--glass-shadow);
   }
 
   .glass-button {
-    @apply backdrop-blur-sm border hover:bg-accent transition-all duration-200;
+    @apply backdrop-blur-sm border-2 hover:bg-accent transition-all duration-200 shadow-sm;
     background: var(--glass-bg);
     border-color: var(--glass-border);
   }
 
   .maven-header {
-    @apply fixed top-0 left-0 right-0 z-50 backdrop-blur-md border-b;
+    @apply fixed top-0 left-0 right-0 z-50 backdrop-blur-md border-b-2 shadow-sm;
     background: var(--glass-bg);
     border-color: var(--glass-border);
   }
