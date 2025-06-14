@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -130,7 +131,17 @@ export const usePackages = () => {
   };
 
   const recordDownload = async (versionId: string) => {
-    const { error } = await supabase
+    // First, get the package namespace ID from the version
+    const { data: versionData, error: versionError } = await supabase
+      .from('package_versions')
+      .select('package_namespace_id')
+      .eq('id', versionId)
+      .single();
+
+    if (versionError) throw versionError;
+
+    // Record the download in analytics
+    const { error: analyticsError } = await supabase
       .from('download_analytics')
       .insert({
         package_id: versionId,
@@ -138,7 +149,27 @@ export const usePackages = () => {
         ip_address: null, // Will be set by the database
       });
 
-    if (error) throw error;
+    if (analyticsError) throw analyticsError;
+
+    // Update the version's download count
+    const { error: versionUpdateError } = await supabase
+      .from('package_versions')
+      .update({ 
+        downloads: supabase.sql`downloads + 1`
+      })
+      .eq('id', versionId);
+
+    if (versionUpdateError) throw versionUpdateError;
+
+    // Update the package namespace's total downloads count
+    const { error: namespaceUpdateError } = await supabase
+      .from('package_namespaces')
+      .update({ 
+        total_downloads: supabase.sql`total_downloads + 1`
+      })
+      .eq('id', versionData.package_namespace_id);
+
+    if (namespaceUpdateError) throw namespaceUpdateError;
 
     // Invalidate queries to refresh download counts
     queryClient.invalidateQueries({ queryKey: ['packages'] });
