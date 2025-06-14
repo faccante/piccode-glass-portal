@@ -36,7 +36,7 @@ export type Database = {
             foreignKeyName: "download_analytics_package_id_fkey"
             columns: ["package_id"]
             isOneToOne: false
-            referencedRelation: "packages"
+            referencedRelation: "package_versions"
             referencedColumns: ["id"]
           },
         ]
@@ -138,78 +138,6 @@ export type Database = {
             columns: ["package_namespace_id"]
             isOneToOne: false
             referencedRelation: "package_namespaces"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      packages: {
-        Row: {
-          approved_at: string | null
-          approved_by: string | null
-          author_email: string
-          author_id: string
-          created_at: string
-          description: string
-          downloads: number
-          github_repo: string
-          id: string
-          jar_file_size: number | null
-          jar_file_url: string | null
-          license: string
-          name: string
-          status: string
-          updated_at: string
-          version: string
-        }
-        Insert: {
-          approved_at?: string | null
-          approved_by?: string | null
-          author_email: string
-          author_id: string
-          created_at?: string
-          description: string
-          downloads?: number
-          github_repo: string
-          id?: string
-          jar_file_size?: number | null
-          jar_file_url?: string | null
-          license: string
-          name: string
-          status?: string
-          updated_at?: string
-          version: string
-        }
-        Update: {
-          approved_at?: string | null
-          approved_by?: string | null
-          author_email?: string
-          author_id?: string
-          created_at?: string
-          description?: string
-          downloads?: number
-          github_repo?: string
-          id?: string
-          jar_file_size?: number | null
-          jar_file_url?: string | null
-          license?: string
-          name?: string
-          status?: string
-          updated_at?: string
-          version?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "packages_approved_by_fkey"
-            columns: ["approved_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "packages_author_id_fkey"
-            columns: ["author_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]

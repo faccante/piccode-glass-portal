@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -45,6 +46,8 @@ export const usePackages = () => {
       setLoading(true);
       setError(null);
       
+      console.log('Fetching packages for user:', user?.id, 'profile role:', profile?.role);
+      
       let query = supabase
         .from('package_namespaces')
         .select(`
@@ -55,14 +58,15 @@ export const usePackages = () => {
           )
         `);
 
-      // If user is not a manager, only show approved packages
-      if (!profile || profile.role !== 'manager') {
-        query = query.eq('status', 'approved');
-      }
-
+      // If user is not a manager, show all packages (approved for others, all statuses for own packages)
+      // RLS policies will handle the filtering automatically
       const { data, error: fetchError } = await query.order('total_downloads', { ascending: false });
       
+      console.log('Raw package data:', data);
+      console.log('Fetch error:', fetchError);
+      
       if (fetchError) {
+        console.error('Supabase fetch error:', fetchError);
         setError(fetchError.message);
         return;
       }
@@ -85,6 +89,7 @@ export const usePackages = () => {
         })
       );
       
+      console.log('Packages with versions:', packagesWithVersions);
       setPackages(packagesWithVersions);
     } catch (err) {
       console.error('Error fetching packages:', err);
@@ -140,6 +145,10 @@ export const usePackages = () => {
     }
 
     try {
+      console.log('Creating package namespace:', packageData);
+      console.log('User ID:', user.id);
+      console.log('User email:', user.email);
+
       // Check if package namespace already exists
       const { data: existingPackage } = await supabase
         .from('package_namespaces')
@@ -164,6 +173,8 @@ export const usePackages = () => {
         })
         .select()
         .single();
+
+      console.log('Package creation result:', { newPackage, namespaceError });
 
       if (namespaceError) throw namespaceError;
 
@@ -207,8 +218,7 @@ export const usePackages = () => {
       const { error } = await supabase
         .from('package_namespaces')
         .update(updateData)
-        .eq('id', packageId)
-        .eq('author_id', user.id);
+        .eq('id', packageId);
 
       if (error) throw error;
 
@@ -251,7 +261,7 @@ export const usePackages = () => {
 
   const recordDownload = async (versionId: string) => {
     try {
-      // Record download analytics using the correct column name 'package_id'
+      // Record download analytics
       await supabase
         .from('download_analytics')
         .insert({
@@ -259,7 +269,7 @@ export const usePackages = () => {
           user_agent: navigator.userAgent
         });
 
-      // Update version download count using RPC or direct increment
+      // Update version download count
       const { data: currentVersion } = await supabase
         .from('package_versions')
         .select('downloads')
@@ -316,8 +326,7 @@ export const usePackages = () => {
       const { error } = await supabase
         .from('package_namespaces')
         .delete()
-        .eq('id', packageId)
-        .eq('author_id', user.id);
+        .eq('id', packageId);
 
       if (error) throw error;
 
@@ -329,8 +338,10 @@ export const usePackages = () => {
   };
 
   useEffect(() => {
-    fetchPackages();
-  }, [profile]);
+    if (user) {
+      fetchPackages();
+    }
+  }, [user, profile]);
 
   return {
     packages,
