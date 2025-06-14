@@ -12,12 +12,9 @@ const Home = () => {
   const { packages, loading } = usePackages();
   const navigate = useNavigate();
 
-  console.log('Home page - packages loaded:', packages);
-  console.log('Home page - loading state:', loading);
-
-  // For now, show all packages to debug what's in the database
-  // Filter packages by search term only
-  const filteredPackages = packages.filter(pkg =>
+  // Filter packages to only show approved ones, then filter by search term
+  const approvedPackages = packages.filter(pkg => pkg.status === 'approved');
+  const filteredPackages = approvedPackages.filter(pkg =>
     pkg.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     pkg.description.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -55,7 +52,7 @@ const Home = () => {
       <section className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-semibold text-foreground">
-            {searchTerm ? `Search Results (${filteredPackages.length})` : `All Packages (${packages.length})`}
+            {searchTerm ? `Search Results (${filteredPackages.length})` : 'Available Packages'}
           </h2>
         </div>
 
@@ -71,11 +68,8 @@ const Home = () => {
               <p className="text-muted-foreground">
                 {searchTerm 
                   ? `No packages match "${searchTerm}"`
-                  : "No packages are available yet. Check back later!"
+                  : "No approved packages are available yet. Check back later!"
                 }
-              </p>
-              <p className="text-sm text-muted-foreground mt-2">
-                Total packages in database: {packages.length}
               </p>
             </CardContent>
           </Card>
@@ -95,13 +89,6 @@ const Home = () => {
                       </h3>
                       <span className="text-sm text-muted-foreground">
                         v{pkg.latest_version || '1.0.0'}
-                      </span>
-                      <span className={`px-2 py-1 rounded text-xs ${
-                        pkg.status === 'approved' ? 'bg-green-500/20 text-green-300' :
-                        pkg.status === 'pending' ? 'bg-yellow-500/20 text-yellow-300' :
-                        'bg-gray-500/20 text-gray-300'
-                      }`}>
-                        {pkg.status}
                       </span>
                       <ExternalLink className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>

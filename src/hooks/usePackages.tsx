@@ -45,11 +45,10 @@ export const usePackages = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  // Public packages query - shows all packages regardless of user
   const { data: packages = [], isLoading: loading, refetch: fetchPackages } = useQuery({
     queryKey: ['packages'],
     queryFn: async () => {
-      console.log('Fetching all packages...');
+      console.log('Fetching packages...');
       
       const { data, error } = await supabase
         .from('package_namespaces')
@@ -94,61 +93,6 @@ export const usePackages = () => {
       console.log('Packages with versions:', packagesWithVersions);
       return packagesWithVersions as PackageNamespace[];
     },
-  });
-
-  // User-specific packages query for dashboard
-  const { data: userPackages = [], isLoading: userPackagesLoading, refetch: fetchUserPackages } = useQuery({
-    queryKey: ['userPackages', user?.id],
-    queryFn: async () => {
-      if (!user) return [];
-      
-      console.log('Fetching user packages for user:', user.id);
-      
-      const { data, error } = await supabase
-        .from('package_namespaces')
-        .select(`
-          *,
-          profiles!package_namespaces_author_id_fkey (
-            full_name,
-            email,
-            avatar_url
-          )
-        `)
-        .eq('author_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching user packages:', error);
-        throw error;
-      }
-
-      console.log('Raw user packages data:', data);
-
-      // Get latest version for each package
-      const packagesWithVersions = await Promise.all(
-        data.map(async (pkg) => {
-          const { data: versions, error: versionError } = await supabase
-            .from('package_versions')
-            .select('version, created_at')
-            .eq('package_namespace_id', pkg.id)
-            .order('created_at', { ascending: false })
-            .limit(1);
-
-          if (versionError) {
-            console.error('Error fetching versions for package:', pkg.id, versionError);
-          }
-
-          return {
-            ...pkg,
-            latest_version: versions && versions.length > 0 ? versions[0].version : undefined
-          };
-        })
-      );
-
-      console.log('User packages with versions:', packagesWithVersions);
-      return packagesWithVersions as PackageNamespace[];
-    },
-    enabled: !!user,
   });
 
   const getPackageDetails = async (packageId: string): Promise<PackageNamespace> => {
@@ -252,7 +196,6 @@ export const usePackages = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['packages'] });
-      queryClient.invalidateQueries({ queryKey: ['userPackages'] });
     },
   });
 
@@ -279,7 +222,6 @@ export const usePackages = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['packages'] });
-      queryClient.invalidateQueries({ queryKey: ['userPackages'] });
     },
   });
 
@@ -292,15 +234,12 @@ export const usePackages = () => {
   };
 
   return {
-    packages, // All packages for public viewing
-    userPackages, // User's own packages for dashboard
+    packages,
     loading,
-    userPackagesLoading,
     getPackageDetails,
     recordDownload,
     submitPackage,
     deletePackage,
     fetchPackages,
-    fetchUserPackages,
   };
 };

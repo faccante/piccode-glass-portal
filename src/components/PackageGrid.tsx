@@ -5,24 +5,20 @@ import PackageCard from './PackageCard';
 
 interface PackageGridProps {
   packages: PackageNamespace[];
-  loading?: boolean;
-  error?: string | null;
+  loading: boolean;
+  error: string | null;
   onPackageClick?: (packageId: string) => void;
   onStatusChange?: (packageId: string, status: PackageNamespace['status']) => void;
-  onDeletePackage?: (packageId: string) => Promise<void>;
   isManager?: boolean;
-  showActions?: boolean;
 }
 
 const PackageGrid: React.FC<PackageGridProps> = ({
   packages,
-  loading = false,
-  error = null,
+  loading,
+  error,
   onPackageClick,
   onStatusChange,
-  onDeletePackage,
-  isManager = false,
-  showActions = false
+  isManager = false
 }) => {
   if (loading) {
     return (
@@ -76,9 +72,7 @@ const PackageGrid: React.FC<PackageGridProps> = ({
           package={pkg}
           onPackageClick={onPackageClick}
           onStatusChange={onStatusChange}
-          onDeletePackage={onDeletePackage}
           isManager={isManager}
-          showActions={showActions}
         />
       ))}
     </div>
