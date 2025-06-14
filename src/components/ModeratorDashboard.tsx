@@ -8,7 +8,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import UserDashboard from '@/components/UserDashboard';
 import PackageManagerList from '@/components/PackageManagerList';
-import DownloadAnalyticsCard from '@/components/DownloadAnalyticsCard';
+import PackageInstallChart from '@/components/PackageInstallChart';
 
 const ModeratorDashboard: React.FC = () => {
   const { user, profile } = useAuth();
@@ -135,7 +135,13 @@ const ModeratorDashboard: React.FC = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <DownloadAnalyticsCard />
+              {userPackages.length > 0 ? (
+                <PackageInstallChart packageId={userPackages[0].id} />
+              ) : (
+                <div className="h-64 flex items-center justify-center text-muted-foreground">
+                  Create a package to see analytics
+                </div>
+              )}
             </CardContent>
           </Card>
 
