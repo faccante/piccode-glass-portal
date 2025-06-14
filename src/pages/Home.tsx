@@ -3,13 +3,13 @@ import React, { useState } from 'react';
 import { Search, Package, ExternalLink, Calendar, User } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
-import { usePackages } from '@/hooks/usePackages';
+import { usePublicPackages } from '@/hooks/usePublicPackages';
 import { useNavigate } from 'react-router-dom';
 import Avatar from '@/components/Avatar';
 
 const Home = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const { packages, loading } = usePackages();
+  const { packages, loading } = usePublicPackages();
   const navigate = useNavigate();
 
   // Show all approved packages from any user, then filter by search term
