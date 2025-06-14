@@ -1,17 +1,18 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Package, BarChart3, Download, Users, Plus, MoreVertical, GitBranch, Trash2, Settings } from 'lucide-react';
+import { Package, BarChart3, Download, Users, Plus, MoreVertical, GitBranch, Trash2, Settings, ChevronDown, ChevronRight } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import PackageCreateForm from '@/components/PackageCreateForm';
 import VersionUploadForm from '@/components/VersionUploadForm';
 import VersionManagementForm from '@/components/VersionManagementForm';
 import { usePackages } from '@/hooks/usePackages';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 const Dashboard: React.FC = () => {
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -19,6 +20,8 @@ const Dashboard: React.FC = () => {
   const [showVersionManagement, setShowVersionManagement] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<any>(null);
+  const [packageVersions, setPackageVersions] = useState<Record<string, any[]>>({});
+  const [loadingVersions, setLoadingVersions] = useState<Record<string, boolean>>({});
   const { packages, loading, deletePackage, fetchPackages } = usePackages();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -33,6 +36,39 @@ const Dashboard: React.FC = () => {
   });
 
   console.log('Dashboard - User packages:', userPackages);
+
+  const fetchPackageVersions = async (packageId: string) => {
+    if (packageVersions[packageId]) {
+      // Already loaded
+      return;
+    }
+
+    setLoadingVersions(prev => ({ ...prev, [packageId]: true }));
+    
+    try {
+      const { data, error } = await supabase
+        .from('package_versions')
+        .select('*')
+        .eq('package_namespace_id', packageId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      setPackageVersions(prev => ({
+        ...prev,
+        [packageId]: data || []
+      }));
+    } catch (error) {
+      console.error('Error fetching versions:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load package versions",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingVersions(prev => ({ ...prev, [packageId]: false }));
+    }
+  };
 
   const handleAddVersion = (packageData: any) => {
     setSelectedPackage(packageData);
@@ -74,6 +110,25 @@ const Dashboard: React.FC = () => {
     setShowCreateForm(false);
     // Refresh packages after creation
     fetchPackages();
+  };
+
+  const handleVersionUploaded = () => {
+    // Refresh packages and clear version cache for the selected package
+    fetchPackages();
+    if (selectedPackage) {
+      setPackageVersions(prev => {
+        const newVersions = { ...prev };
+        delete newVersions[selectedPackage.id];
+        return newVersions;
+      });
+    }
+  };
+
+  const formatFileSize = (bytes?: number) => {
+    if (!bytes) return 'Unknown';
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
   };
 
   const totalDownloads = userPackages.reduce((sum, pkg) => sum + pkg.total_downloads, 0);
@@ -164,7 +219,7 @@ const Dashboard: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Package List */}
+      {/* Package List with Expandable Versions */}
       <Card className="bg-white/70 backdrop-blur-sm border border-gray-200">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-gray-900">
@@ -193,94 +248,147 @@ const Dashboard: React.FC = () => {
               </div>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Namespace</TableHead>
-                  <TableHead>Latest Version</TableHead>
-                  <TableHead>License</TableHead>
-                  <TableHead>Downloads</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Updated</TableHead>
-                  <TableHead className="w-[50px]">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {userPackages.map((pkg) => (
-                  <TableRow key={pkg.id}>
-                    <TableCell className="font-medium">
-                      <div>
-                        <div className="font-semibold text-blue-600">{pkg.name}</div>
-                        <div className="text-sm text-gray-500 line-clamp-1">{pkg.description}</div>
-                        <div className="text-xs text-gray-400 mt-1">
-                          <a 
-                            href={pkg.github_repo} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="hover:text-blue-600"
-                          >
-                            {pkg.github_repo}
-                          </a>
+            <Accordion type="multiple" className="w-full">
+              {userPackages.map((pkg) => (
+                <AccordionItem key={pkg.id} value={pkg.id}>
+                  <AccordionTrigger 
+                    className="hover:no-underline"
+                    onClick={() => fetchPackageVersions(pkg.id)}
+                  >
+                    <div className="flex items-center justify-between w-full pr-4">
+                      <div className="flex items-center space-x-4">
+                        <div className="text-left">
+                          <div className="font-semibold text-blue-600">{pkg.name}</div>
+                          <div className="text-sm text-gray-500 line-clamp-1">{pkg.description}</div>
                         </div>
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <span className={`px-2 py-1 text-xs rounded-full ${
-                        pkg.latest_version ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
-                      }`}>
-                        {pkg.latest_version || 'No versions'}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-sm font-mono bg-gray-100 px-2 py-1 rounded">
-                        {pkg.license}
-                      </span>
-                    </TableCell>
-                    <TableCell>{pkg.total_downloads.toLocaleString()}</TableCell>
-                    <TableCell>
-                      <span className={`px-2 py-1 text-xs rounded-full ${
-                        pkg.status === 'approved' ? 'bg-green-100 text-green-800' :
-                        pkg.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                        pkg.status === 'reviewing' ? 'bg-blue-100 text-blue-800' :
-                        'bg-red-100 text-red-800'
-                      }`}>
-                        {pkg.status}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-sm text-gray-500">
-                      {new Date(pkg.updated_at).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48">
-                          <DropdownMenuItem onClick={() => handleAddVersion(pkg)}>
-                            <GitBranch className="h-4 w-4 mr-2" />
-                            Add New Version
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleManageVersions(pkg)}>
-                            <Settings className="h-4 w-4 mr-2" />
-                            Manage Versions
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem 
-                            onClick={() => handleDeletePackage(pkg)}
-                            className="text-red-600 focus:text-red-600"
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete Package
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                      <div className="flex items-center space-x-4">
+                        <span className={`px-2 py-1 text-xs rounded-full ${
+                          pkg.latest_version ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+                        }`}>
+                          {pkg.latest_version || 'No versions'}
+                        </span>
+                        <span className={`px-2 py-1 text-xs rounded-full ${
+                          pkg.status === 'approved' ? 'bg-green-100 text-green-800' :
+                          pkg.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                          pkg.status === 'reviewing' ? 'bg-blue-100 text-blue-800' :
+                          'bg-red-100 text-red-800'
+                        }`}>
+                          {pkg.status}
+                        </span>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-48">
+                            <DropdownMenuItem onClick={() => handleAddVersion(pkg)}>
+                              <GitBranch className="h-4 w-4 mr-2" />
+                              Add New Version
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleManageVersions(pkg)}>
+                              <Settings className="h-4 w-4 mr-2" />
+                              Manage Versions
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem 
+                              onClick={() => handleDeletePackage(pkg)}
+                              className="text-red-600 focus:text-red-600"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete Package
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <div className="px-6 pb-4">
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                          <div>
+                            <span className="text-gray-500">License:</span>
+                            <div className="font-mono bg-gray-100 px-2 py-1 rounded mt-1">{pkg.license}</div>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Downloads:</span>
+                            <div className="font-semibold mt-1">{pkg.total_downloads.toLocaleString()}</div>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Updated:</span>
+                            <div className="mt-1">{new Date(pkg.updated_at).toLocaleDateString()}</div>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Repository:</span>
+                            <div className="mt-1">
+                              <a 
+                                href={pkg.github_repo} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:underline text-xs"
+                              >
+                                {pkg.github_repo}
+                              </a>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="border-t pt-4">
+                          <h4 className="font-semibold mb-3 flex items-center gap-2">
+                            <GitBranch className="h-4 w-4" />
+                            Versions
+                          </h4>
+                          {loadingVersions[pkg.id] ? (
+                            <div className="text-center py-4">
+                              <p className="text-gray-500">Loading versions...</p>
+                            </div>
+                          ) : packageVersions[pkg.id]?.length > 0 ? (
+                            <div className="space-y-2">
+                              {packageVersions[pkg.id].map((version) => (
+                                <div key={version.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                  <div className="flex items-center space-x-3">
+                                    <span className="font-mono bg-blue-50 px-2 py-1 rounded text-blue-800 text-sm">
+                                      v{version.version}
+                                    </span>
+                                    <span className="text-sm text-gray-500">
+                                      {formatFileSize(version.jar_file_size)}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center space-x-3">
+                                    <span className="text-sm text-gray-500">
+                                      {version.downloads} downloads
+                                    </span>
+                                    <span className="text-xs text-gray-400">
+                                      {new Date(version.created_at).toLocaleDateString()}
+                                    </span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="text-center py-8 border-2 border-dashed border-gray-200 rounded-lg">
+                              <GitBranch className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                              <p className="text-gray-500">No versions uploaded yet</p>
+                              <p className="text-sm text-gray-400 mb-3">Upload your first version to get started</p>
+                              <Button 
+                                onClick={() => handleAddVersion(pkg)}
+                                size="sm"
+                                className="bg-blue-600 hover:bg-blue-700 text-white"
+                              >
+                                <Plus className="h-4 w-4 mr-2" />
+                                Add Version
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
           )}
         </CardContent>
       </Card>
@@ -298,6 +406,7 @@ const Dashboard: React.FC = () => {
             setShowVersionForm(false);
             setSelectedPackage(null);
           }}
+          onVersionUploaded={handleVersionUploaded}
         />
       )}
 
