@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -18,28 +17,28 @@ const PackageDetail = () => {
   const [packageData, setPackageData] = useState<PackageNamespace | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchPackageData = async () => {
-      if (!packageId) return;
-      
-      try {
-        setLoading(true);
-        const data = await getPackageDetails(packageId);
-        setPackageData(data);
-      } catch (error) {
-        toast({
-          title: "Error",
-          description: "Failed to load package details",
-          variant: "destructive",
-        });
-        navigate('/');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPackageData();
+  const fetchPackageData = useCallback(async () => {
+    if (!packageId) return;
+    
+    try {
+      setLoading(true);
+      const data = await getPackageDetails(packageId);
+      setPackageData(data);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to load package details",
+        variant: "destructive",
+      });
+      navigate('/');
+    } finally {
+      setLoading(false);
+    }
   }, [packageId, getPackageDetails, navigate, toast]);
+
+  useEffect(() => {
+    fetchPackageData();
+  }, [fetchPackageData]);
 
   const handleDownload = async (versionId: string, version: string) => {
     try {
