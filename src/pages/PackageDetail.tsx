@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -9,6 +10,7 @@ import { usePackages, PackageNamespace } from '@/hooks/usePackages';
 import { useToast } from '@/hooks/use-toast';
 import PackageInstallChart from '@/components/PackageInstallChart';
 import Avatar from '@/components/Avatar';
+import CopyableInstallCommand from '@/components/CopyableInstallCommand';
 
 const PackageDetail = () => {
   const { packageId } = useParams<{ packageId: string }>();
@@ -84,6 +86,9 @@ const PackageDetail = () => {
     );
   }
 
+  // Get the latest version for the install command
+  const latestVersion = packageData.versions?.[0];
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -119,9 +124,16 @@ const PackageDetail = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="bg-black/20 p-4 rounded-lg font-mono text-sm">
-                <code>picoc install {packageData.name}</code>
-              </div>
+              {latestVersion ? (
+                <CopyableInstallCommand 
+                  packageName={packageData.name} 
+                  versionId={latestVersion.id}
+                />
+              ) : (
+                <div className="bg-black/20 p-4 rounded-lg font-mono text-sm">
+                  <code>No versions available</code>
+                </div>
+              )}
             </CardContent>
           </Card>
 
