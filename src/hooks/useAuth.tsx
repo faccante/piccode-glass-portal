@@ -9,6 +9,7 @@ interface Profile {
   full_name?: string;
   bio?: string;
   website?: string;
+  avatar_url?: string;
   role: 'user' | 'manager';
 }
 
