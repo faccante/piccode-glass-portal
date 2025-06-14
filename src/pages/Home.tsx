@@ -12,8 +12,9 @@ const Home = () => {
   const { packages, loading } = usePackages();
   const navigate = useNavigate();
 
-  // Filter packages based on search term
-  const filteredPackages = packages.filter(pkg =>
+  // Filter packages to only show approved ones, then filter by search term
+  const approvedPackages = packages.filter(pkg => pkg.status === 'approved');
+  const filteredPackages = approvedPackages.filter(pkg =>
     pkg.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     pkg.description.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -67,7 +68,7 @@ const Home = () => {
               <p className="text-muted-foreground">
                 {searchTerm 
                   ? `No packages match "${searchTerm}"`
-                  : "No packages have been uploaded yet. Be the first to contribute!"
+                  : "No approved packages are available yet. Check back later!"
                 }
               </p>
             </CardContent>

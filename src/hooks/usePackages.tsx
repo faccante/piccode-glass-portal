@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -61,7 +60,6 @@ export const usePackages = () => {
             avatar_url
           )
         `)
-        .eq('status', 'approved')
         .order('created_at', { ascending: false });
 
       if (error) {
