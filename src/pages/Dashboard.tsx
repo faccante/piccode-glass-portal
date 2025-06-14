@@ -21,7 +21,7 @@ const Dashboard: React.FC = () => {
         navigate('/manager-dashboard');
         return;
       }
-      // For regular users, stay on this page which will show UserDashboard
+      // For regular users and moderators, stay on this page which will show UserDashboard
     }
   }, [user, profile, loading, navigate]);
 
@@ -44,7 +44,7 @@ const Dashboard: React.FC = () => {
     return null;
   }
 
-  // Show user dashboard for regular users
+  // Show user dashboard for regular users and moderators
   return <UserDashboard />;
 };
 

@@ -10,7 +10,7 @@ interface Profile {
   bio?: string;
   website?: string;
   avatar_url?: string;
-  role: 'user' | 'manager';
+  role: 'user' | 'manager' | 'moderator';
 }
 
 interface AuthContextType {
@@ -46,6 +46,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (session.user.email_confirmed_at) {
             setTimeout(async () => {
               try {
+                console.log('Fetching profile for user:', session.user.id);
                 const { data: profileData, error } = await supabase
                   .from('profiles')
                   .select('*')
@@ -55,9 +56,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 if (error) {
                   console.error('Error fetching profile:', error);
                 } else {
+                  console.log('Profile fetched successfully:', profileData);
                   const typedProfile: Profile = {
                     ...profileData,
-                    role: profileData.role as 'user' | 'manager'
+                    role: profileData.role as 'user' | 'manager' | 'moderator'
                   };
                   setProfile(typedProfile);
                 }

@@ -33,6 +33,7 @@ const App = () => (
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/account" element={<Account />} />
               <Route path="/manager-dashboard" element={<ManagerDashboard />} />
+              <Route path="/moderator-dashboard" element={<ManagerDashboard />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Layout>

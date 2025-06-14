@@ -190,6 +190,10 @@ export type Database = {
         Args: { username: string }
         Returns: string
       }
+      get_current_user_role: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       search_profiles_by_email: {
         Args: { search_email: string }
         Returns: {

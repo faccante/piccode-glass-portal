@@ -12,8 +12,8 @@ const ManagerDashboard: React.FC = () => {
   const { profile } = useAuth();
   const [showModeratorManager, setShowModeratorManager] = useState(false);
 
-  // Redirect if not manager - check profile.role instead of user.role
-  if (profile?.role !== 'manager') {
+  // Check if user has manager or moderator role
+  if (!profile || !['manager', 'moderator'].includes(profile.role)) {
     return (
       <div className="text-center py-16">
         <XCircle className="h-16 w-16 text-destructive mx-auto mb-4" />
@@ -23,20 +23,31 @@ const ManagerDashboard: React.FC = () => {
     );
   }
 
+  const isManager = profile.role === 'manager';
+
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold gradient-text">Manager Dashboard</h1>
-          <p className="text-muted-foreground">Review and manage package submissions and moderators</p>
+          <h1 className="text-3xl font-bold gradient-text">
+            {profile.role === 'manager' ? 'Manager' : 'Moderator'} Dashboard
+          </h1>
+          <p className="text-muted-foreground">
+            {profile.role === 'manager' 
+              ? 'Review and manage package submissions and moderators' 
+              : 'Review and manage package submissions'
+            }
+          </p>
         </div>
-        <Button
-          onClick={() => setShowModeratorManager(true)}
-          className="bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/50 text-blue-300"
-        >
-          <UserPlus className="h-4 w-4 mr-2" />
-          Manage Moderators
-        </Button>
+        {isManager && (
+          <Button
+            onClick={() => setShowModeratorManager(true)}
+            className="bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/50 text-blue-300"
+          >
+            <UserPlus className="h-4 w-4 mr-2" />
+            Manage Moderators
+          </Button>
+        )}
       </div>
 
       {/* Stats Overview */}
@@ -63,16 +74,18 @@ const ManagerDashboard: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card className="glass-card">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Moderators</CardTitle>
-            <Users className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">-</div>
-            <p className="text-xs text-muted-foreground">Active moderators</p>
-          </CardContent>
-        </Card>
+        {isManager && (
+          <Card className="glass-card">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Moderators</CardTitle>
+              <Users className="h-4 w-4 text-primary" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">-</div>
+              <p className="text-xs text-muted-foreground">Active moderators</p>
+            </CardContent>
+          </Card>
+        )}
 
         <Card className="glass-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -89,11 +102,13 @@ const ManagerDashboard: React.FC = () => {
       {/* Package Management */}
       <PackageManagerList />
 
-      {/* Moderator Manager Modal */}
-      <ModeratorManager 
-        isOpen={showModeratorManager}
-        onClose={() => setShowModeratorManager(false)}
-      />
+      {/* Moderator Manager Modal - Only show for managers */}
+      {isManager && (
+        <ModeratorManager 
+          isOpen={showModeratorManager}
+          onClose={() => setShowModeratorManager(false)}
+        />
+      )}
     </div>
   );
 };
