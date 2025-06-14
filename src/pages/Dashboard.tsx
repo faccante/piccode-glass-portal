@@ -9,10 +9,10 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import PackageCreateForm from '@/components/PackageCreateForm';
 import VersionUploadForm from '@/components/VersionUploadForm';
 import VersionManagementForm from '@/components/VersionManagementForm';
-import { usePackages } from '@/hooks/usePackages';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 const Dashboard: React.FC = () => {
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -22,18 +22,70 @@ const Dashboard: React.FC = () => {
   const [selectedPackage, setSelectedPackage] = useState<any>(null);
   const [packageVersions, setPackageVersions] = useState<Record<string, any[]>>({});
   const [loadingVersions, setLoadingVersions] = useState<Record<string, boolean>>({});
-  const { packages, loading, deletePackage, fetchPackages } = usePackages();
   const { user } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Fetch user's packages (all statuses, not just approved)
+  const { data: packages = [], isLoading: loading, refetch: fetchPackages } = useQuery({
+    queryKey: ['user-packages', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+
+      console.log('Fetching user packages for user ID:', user.id);
+
+      const { data, error } = await supabase
+        .from('package_namespaces')
+        .select(`
+          *,
+          profiles!package_namespaces_author_id_fkey (
+            full_name,
+            email,
+            avatar_url
+          )
+        `)
+        .eq('author_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching user packages:', error);
+        throw error;
+      }
+
+      console.log('User packages data:', data);
+
+      // Get latest version for each package
+      const packagesWithVersions = await Promise.all(
+        data.map(async (pkg) => {
+          const { data: versions, error: versionError } = await supabase
+            .from('package_versions')
+            .select('version, created_at')
+            .eq('package_namespace_id', pkg.id)
+            .order('created_at', { ascending: false })
+            .limit(1);
+
+          if (versionError) {
+            console.error('Error fetching versions for package:', pkg.id, versionError);
+          }
+
+          return {
+            ...pkg,
+            latest_version: versions && versions.length > 0 ? versions[0].version : undefined
+          };
+        })
+      );
+
+      console.log('User packages with versions:', packagesWithVersions);
+      return packagesWithVersions;
+    },
+    enabled: !!user?.id,
+  });
 
   console.log('Dashboard - All packages:', packages);
   console.log('Dashboard - Current user ID:', user?.id);
 
-  // Filter packages to show only user's packages
-  const userPackages = packages.filter(pkg => {
-    console.log('Checking package:', pkg.name, 'author_id:', pkg.author_id, 'user_id:', user?.id);
-    return pkg.author_id === user?.id;
-  });
+  // Filter packages to show only user's packages (already filtered in query)
+  const userPackages = packages;
 
   console.log('Dashboard - User packages:', userPackages);
 
@@ -89,11 +141,31 @@ const Dashboard: React.FC = () => {
     if (!selectedPackage) return;
 
     try {
-      await deletePackage(selectedPackage.id);
+      // First delete all versions of the package
+      const { error: versionsError } = await supabase
+        .from('package_versions')
+        .delete()
+        .eq('package_namespace_id', selectedPackage.id);
+
+      if (versionsError) throw versionsError;
+
+      // Then delete the package namespace
+      const { error } = await supabase
+        .from('package_namespaces')
+        .delete()
+        .eq('id', selectedPackage.id)
+        .eq('author_id', user?.id);
+
+      if (error) throw error;
+
       toast({
         title: "Package deleted",
         description: "The package namespace and all its versions have been deleted.",
       });
+
+      // Refresh the packages list
+      queryClient.invalidateQueries({ queryKey: ['user-packages', user?.id] });
+      
       setShowDeleteDialog(false);
       setSelectedPackage(null);
     } catch (error) {
@@ -135,7 +207,7 @@ const Dashboard: React.FC = () => {
     return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
   };
 
-  const totalDownloads = userPackages.reduce((sum, pkg) => sum + pkg.total_downloads, 0);
+  const totalDownloads = userPackages.reduce((sum, pkg) => sum + (pkg.total_downloads || 0), 0);
 
   return (
     <div className="space-y-8 py-8">

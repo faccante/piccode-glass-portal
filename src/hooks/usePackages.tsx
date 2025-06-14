@@ -49,6 +49,8 @@ export const usePackages = () => {
   const { data: packages = [], isLoading: loading, refetch: fetchPackages } = useQuery({
     queryKey: ['packages'],
     queryFn: async () => {
+      console.log('Fetching packages...');
+      
       const { data, error } = await supabase
         .from('package_namespaces')
         .select(`
@@ -62,8 +64,36 @@ export const usePackages = () => {
         .eq('status', 'approved')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      return data as PackageNamespace[];
+      if (error) {
+        console.error('Error fetching packages:', error);
+        throw error;
+      }
+
+      console.log('Raw packages data:', data);
+
+      // Get latest version for each package
+      const packagesWithVersions = await Promise.all(
+        data.map(async (pkg) => {
+          const { data: versions, error: versionError } = await supabase
+            .from('package_versions')
+            .select('version, created_at')
+            .eq('package_namespace_id', pkg.id)
+            .order('created_at', { ascending: false })
+            .limit(1);
+
+          if (versionError) {
+            console.error('Error fetching versions for package:', pkg.id, versionError);
+          }
+
+          return {
+            ...pkg,
+            latest_version: versions && versions.length > 0 ? versions[0].version : undefined
+          };
+        })
+      );
+
+      console.log('Packages with versions:', packagesWithVersions);
+      return packagesWithVersions as PackageNamespace[];
     },
   });
 
@@ -120,9 +150,10 @@ export const usePackages = () => {
     mutationFn: async (packageData: SubmitPackageData) => {
       if (!user) throw new Error('User not authenticated');
 
-      // For now, we'll just create the namespace without actual file upload
-      // In a real implementation, you'd upload the JAR file to storage first
-      const { data, error } = await supabase
+      console.log('Submitting package:', packageData);
+
+      // Create the package namespace
+      const { data: namespaceData, error: namespaceError } = await supabase
         .from('package_namespaces')
         .insert({
           name: packageData.name,
@@ -136,8 +167,34 @@ export const usePackages = () => {
         .select()
         .single();
 
-      if (error) throw error;
-      return data;
+      if (namespaceError) {
+        console.error('Error creating namespace:', namespaceError);
+        throw namespaceError;
+      }
+
+      console.log('Created namespace:', namespaceData);
+
+      // Create the first version
+      const { data: versionData, error: versionError } = await supabase
+        .from('package_versions')
+        .insert({
+          package_namespace_id: namespaceData.id,
+          version: packageData.version,
+          jar_file_url: `uploads/${packageData.name}/${packageData.version}/${packageData.jarFile.name}`,
+          jar_file_size: packageData.jarFile.size,
+          downloads: 0
+        })
+        .select()
+        .single();
+
+      if (versionError) {
+        console.error('Error creating version:', versionError);
+        throw versionError;
+      }
+
+      console.log('Created version:', versionData);
+
+      return namespaceData;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['packages'] });
