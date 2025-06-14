@@ -9,7 +9,6 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import PackageCreateForm from '@/components/PackageCreateForm';
 import VersionUploadForm from '@/components/VersionUploadForm';
 import VersionManagementForm from '@/components/VersionManagementForm';
-import DownloadAnalyticsCard from '@/components/DownloadAnalyticsCard';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -264,9 +263,6 @@ const UserDashboard: React.FC = () => {
           </CardContent>
         </Card>
       </div>
-
-      {/* Download Analytics Card */}
-      <DownloadAnalyticsCard />
 
       {/* Analytics Chart */}
       <Card className="bg-white/70 backdrop-blur-sm border border-gray-200">

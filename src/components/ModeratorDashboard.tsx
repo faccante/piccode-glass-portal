@@ -8,7 +8,6 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import UserDashboard from '@/components/UserDashboard';
 import PackageManagerList from '@/components/PackageManagerList';
-import DownloadAnalyticsCard from '@/components/DownloadAnalyticsCard';
 
 const ModeratorDashboard: React.FC = () => {
   const { user, profile } = useAuth();
@@ -125,9 +124,6 @@ const ModeratorDashboard: React.FC = () => {
               </CardContent>
             </Card>
           </div>
-
-          {/* Download Analytics Card */}
-          <DownloadAnalyticsCard />
 
           {/* User Dashboard Content */}
           <UserDashboard />
