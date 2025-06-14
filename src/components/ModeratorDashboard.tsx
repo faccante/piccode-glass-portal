@@ -8,6 +8,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import UserDashboard from '@/components/UserDashboard';
 import PackageManagerList from '@/components/PackageManagerList';
+import DownloadAnalyticsCard from '@/components/DownloadAnalyticsCard';
 
 const ModeratorDashboard: React.FC = () => {
   const { user, profile } = useAuth();
@@ -124,6 +125,19 @@ const ModeratorDashboard: React.FC = () => {
               </CardContent>
             </Card>
           </div>
+
+          {/* Analytics Overview */}
+          <Card className="bg-white/70 backdrop-blur-sm border border-gray-200">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-gray-900">
+                <BarChart3 className="h-5 w-5" />
+                Analytics Overview
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <DownloadAnalyticsCard />
+            </CardContent>
+          </Card>
 
           {/* User Dashboard Content */}
           <UserDashboard />

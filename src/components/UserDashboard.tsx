@@ -9,6 +9,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import PackageCreateForm from '@/components/PackageCreateForm';
 import VersionUploadForm from '@/components/VersionUploadForm';
 import VersionManagementForm from '@/components/VersionManagementForm';
+import DownloadAnalyticsCard from '@/components/DownloadAnalyticsCard';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -264,7 +265,7 @@ const UserDashboard: React.FC = () => {
         </Card>
       </div>
 
-      {/* Analytics Chart */}
+      {/* Analytics Overview */}
       <Card className="bg-white/70 backdrop-blur-sm border border-gray-200">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-gray-900">
@@ -273,13 +274,7 @@ const UserDashboard: React.FC = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-64 flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg">
-            <div className="text-center">
-              <BarChart3 className="h-12 w-12 text-gray-400 mx-auto mb-2" />
-              <p className="text-gray-500">Analytics chart will appear here</p>
-              <p className="text-sm text-gray-400">Create packages to see data</p>
-            </div>
-          </div>
+          <DownloadAnalyticsCard />
         </CardContent>
       </Card>
 
