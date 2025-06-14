@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -32,11 +33,20 @@ export interface PackageNamespace {
   versions?: PackageVersion[];
 }
 
+export interface SubmitPackageData {
+  name: string;
+  description: string;
+  version: string;
+  license: string;
+  githubRepo: string;
+  jarFile: File;
+}
+
 export const usePackages = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  const { data: packages = [], isLoading: loading } = useQuery({
+  const { data: packages = [], isLoading: loading, refetch: fetchPackages } = useQuery({
     queryKey: ['packages'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -106,10 +116,75 @@ export const usePackages = () => {
     queryClient.invalidateQueries({ queryKey: ['packages'] });
   };
 
+  const submitPackageMutation = useMutation({
+    mutationFn: async (packageData: SubmitPackageData) => {
+      if (!user) throw new Error('User not authenticated');
+
+      // For now, we'll just create the namespace without actual file upload
+      // In a real implementation, you'd upload the JAR file to storage first
+      const { data, error } = await supabase
+        .from('package_namespaces')
+        .insert({
+          name: packageData.name,
+          description: packageData.description,
+          license: packageData.license,
+          github_repo: packageData.githubRepo,
+          author_id: user.id,
+          author_email: user.email || '',
+          status: 'pending'
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['packages'] });
+    },
+  });
+
+  const deletePackageMutation = useMutation({
+    mutationFn: async (packageId: string) => {
+      if (!user) throw new Error('User not authenticated');
+
+      // First delete all versions of the package
+      const { error: versionsError } = await supabase
+        .from('package_versions')
+        .delete()
+        .eq('package_namespace_id', packageId);
+
+      if (versionsError) throw versionsError;
+
+      // Then delete the package namespace
+      const { error } = await supabase
+        .from('package_namespaces')
+        .delete()
+        .eq('id', packageId)
+        .eq('author_id', user.id); // Ensure user can only delete their own packages
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['packages'] });
+    },
+  });
+
+  const submitPackage = async (packageData: SubmitPackageData) => {
+    return submitPackageMutation.mutateAsync(packageData);
+  };
+
+  const deletePackage = async (packageId: string) => {
+    return deletePackageMutation.mutateAsync(packageId);
+  };
+
   return {
     packages,
     loading,
     getPackageDetails,
     recordDownload,
+    submitPackage,
+    deletePackage,
+    fetchPackages,
   };
 };
