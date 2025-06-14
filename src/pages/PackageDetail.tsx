@@ -34,7 +34,7 @@ const PackageDetail = () => {
     } finally {
       setLoading(false);
     }
-  }, [packageId, getPackageDetails, navigate, toast]);
+  }, [packageId]);
 
   useEffect(() => {
     fetchPackageData();
