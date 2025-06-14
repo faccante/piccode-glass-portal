@@ -3,6 +3,7 @@ import React, { useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import UserDashboard from '@/components/UserDashboard';
+import ModeratorDashboard from '@/components/ModeratorDashboard';
 
 const Dashboard: React.FC = () => {
   const { user, profile, loading } = useAuth();
@@ -21,7 +22,7 @@ const Dashboard: React.FC = () => {
         navigate('/manager-dashboard');
         return;
       }
-      // For regular users and moderators, stay on this page which will show UserDashboard
+      // For regular users and moderators, stay on this page
     }
   }, [user, profile, loading, navigate]);
 
@@ -44,7 +45,12 @@ const Dashboard: React.FC = () => {
     return null;
   }
 
-  // Show user dashboard for regular users and moderators
+  // Show appropriate dashboard based on role
+  if (profile?.role === 'moderator') {
+    return <ModeratorDashboard />;
+  }
+
+  // Show user dashboard for regular users
   return <UserDashboard />;
 };
 

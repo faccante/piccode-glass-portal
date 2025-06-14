@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuth';
 import { Package, Users, Eye, Calendar, XCircle, UserPlus } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import PackageManagerList from '@/components/PackageManagerList';
 import ModeratorManager from '@/components/ModeratorManager';
 
@@ -24,6 +26,52 @@ const ManagerDashboard: React.FC = () => {
   }
 
   const isManager = profile.role === 'manager';
+
+  // Fetch package statistics
+  const { data: packageStats } = useQuery({
+    queryKey: ['package-stats'],
+    queryFn: async () => {
+      const { data: packages, error } = await supabase
+        .from('package_namespaces')
+        .select('status, created_at');
+
+      if (error) throw error;
+
+      const now = new Date();
+      const currentMonth = now.getMonth();
+      const currentYear = now.getFullYear();
+
+      const stats = {
+        pending: packages.filter(pkg => pkg.status === 'pending').length,
+        reviewing: packages.filter(pkg => pkg.status === 'reviewing').length,
+        thisMonth: packages.filter(pkg => {
+          const createdAt = new Date(pkg.created_at);
+          return createdAt.getMonth() === currentMonth && 
+                 createdAt.getFullYear() === currentYear &&
+                 ['approved', 'rejected'].includes(pkg.status);
+        }).length
+      };
+
+      return stats;
+    },
+  });
+
+  // Fetch moderator count (only for managers)
+  const { data: moderatorCount } = useQuery({
+    queryKey: ['moderator-count'],
+    queryFn: async () => {
+      if (!isManager) return 0;
+      
+      const { data: moderators, error } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('role', 'moderator');
+
+      if (error) throw error;
+      return moderators.length;
+    },
+    enabled: isManager,
+  });
 
   return (
     <div className="space-y-8">
@@ -58,7 +106,7 @@ const ManagerDashboard: React.FC = () => {
             <Package className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">-</div>
+            <div className="text-2xl font-bold">{packageStats?.pending || 0}</div>
             <p className="text-xs text-muted-foreground">Awaiting review</p>
           </CardContent>
         </Card>
@@ -69,7 +117,7 @@ const ManagerDashboard: React.FC = () => {
             <Eye className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">-</div>
+            <div className="text-2xl font-bold">{packageStats?.reviewing || 0}</div>
             <p className="text-xs text-muted-foreground">Being reviewed</p>
           </CardContent>
         </Card>
@@ -81,7 +129,7 @@ const ManagerDashboard: React.FC = () => {
               <Users className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">-</div>
+              <div className="text-2xl font-bold">{moderatorCount || 0}</div>
               <p className="text-xs text-muted-foreground">Active moderators</p>
             </CardContent>
           </Card>
@@ -93,7 +141,7 @@ const ManagerDashboard: React.FC = () => {
             <Calendar className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">-</div>
+            <div className="text-2xl font-bold">{packageStats?.thisMonth || 0}</div>
             <p className="text-xs text-muted-foreground">Packages reviewed</p>
           </CardContent>
         </Card>
