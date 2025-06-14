@@ -148,15 +148,13 @@ const PackageDetail = () => {
                         {version.downloads} downloads
                       </div>
                     </div>
-                    {packageData.status === 'approved' && (
-                      <Button
-                        onClick={() => handleDownload(version.id, version.version)}
-                        className="bg-primary/20 hover:bg-primary/30 border border-primary/50"
-                      >
-                        <Download className="h-4 w-4 mr-2" />
-                        Download
-                      </Button>
-                    )}
+                    <Button
+                      onClick={() => handleDownload(version.id, version.version)}
+                      className="bg-primary/20 hover:bg-primary/30 border border-primary/50"
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Download
+                    </Button>
                   </div>
                 ))}
               </div>
