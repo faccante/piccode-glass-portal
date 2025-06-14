@@ -62,6 +62,11 @@ const VersionUploadForm: React.FC<VersionUploadFormProps> = ({ package: pkg, onC
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    console.log('Form submission started');
+    console.log('User:', user);
+    console.log('Package:', pkg);
+    console.log('Form data:', formData);
+
     if (!formData.jarFile) {
       toast({
         title: "Missing file",
@@ -93,46 +98,65 @@ const VersionUploadForm: React.FC<VersionUploadFormProps> = ({ package: pkg, onC
     setUploadProgress(0);
 
     try {
-      console.log('Creating version for package:', pkg.id);
-      console.log('Version data:', {
-        package_namespace_id: pkg.id,
-        version: formData.version.trim(),
-        jar_file_size: formData.jarFile.size
-      });
-
+      console.log('About to check for existing version...');
+      
       // Check if version already exists
-      const { data: existingVersion } = await supabase
+      const { data: existingVersion, error: checkError } = await supabase
         .from('package_versions')
         .select('id')
         .eq('package_namespace_id', pkg.id)
         .eq('version', formData.version.trim())
         .maybeSingle();
 
+      console.log('Existing version check result:', { existingVersion, checkError });
+
+      if (checkError) {
+        console.error('Error checking existing version:', checkError);
+        throw new Error(`Database error: ${checkError.message}`);
+      }
+
       if (existingVersion) {
         throw new Error('Version already exists');
       }
 
+      console.log('Starting file upload simulation...');
+      
       // Simulate file upload with progress
       const fileUrl = await simulateFileUpload(formData.jarFile);
+      
+      console.log('File upload completed, URL:', fileUrl);
+      console.log('About to insert version into database...');
 
-      // Create version record in database with correct field names
-      const { data: newVersion, error } = await supabase
+      // Prepare the data to insert
+      const versionData = {
+        package_namespace_id: pkg.id,
+        version: formData.version.trim(),
+        jar_file_url: fileUrl,
+        jar_file_size: formData.jarFile.size,
+        downloads: 0
+      };
+
+      console.log('Version data to insert:', versionData);
+
+      // Create version record in database
+      const { data: newVersion, error: insertError } = await supabase
         .from('package_versions')
-        .insert({
-          package_namespace_id: pkg.id,
-          version: formData.version.trim(),
-          jar_file_url: fileUrl,
-          jar_file_size: formData.jarFile.size
-        })
+        .insert(versionData)
         .select()
         .single();
 
-      console.log('Version creation result:', { newVersion, error });
+      console.log('Insert result:', { newVersion, insertError });
 
-      if (error) {
-        console.error('Database error:', error);
-        throw error;
+      if (insertError) {
+        console.error('Database insertion error:', insertError);
+        throw new Error(`Failed to save version: ${insertError.message}`);
       }
+
+      if (!newVersion) {
+        throw new Error('Version was not created - no data returned');
+      }
+
+      console.log('Version successfully created:', newVersion);
 
       toast({
         title: "Version uploaded successfully",
