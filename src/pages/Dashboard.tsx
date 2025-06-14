@@ -2,20 +2,26 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Package, BarChart3, Download, Users, Plus, MoreVertical, GitBranch } from 'lucide-react';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Package, BarChart3, Download, Users, Plus, MoreVertical, GitBranch, Trash2, Settings } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import PackageCreateForm from '@/components/PackageCreateForm';
 import VersionUploadForm from '@/components/VersionUploadForm';
+import VersionManagementForm from '@/components/VersionManagementForm';
 import { usePackages } from '@/hooks/usePackages';
 import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
 
 const Dashboard: React.FC = () => {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showVersionForm, setShowVersionForm] = useState(false);
+  const [showVersionManagement, setShowVersionManagement] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<any>(null);
-  const { packages, loading } = usePackages();
+  const { packages, loading, deletePackage } = usePackages();
   const { user } = useAuth();
+  const { toast } = useToast();
 
   // Filter packages to show only user's packages
   const userPackages = packages.filter(pkg => pkg.author_id === user?.id);
@@ -23,6 +29,37 @@ const Dashboard: React.FC = () => {
   const handleAddVersion = (packageData: any) => {
     setSelectedPackage(packageData);
     setShowVersionForm(true);
+  };
+
+  const handleManageVersions = (packageData: any) => {
+    setSelectedPackage(packageData);
+    setShowVersionManagement(true);
+  };
+
+  const handleDeletePackage = (packageData: any) => {
+    setSelectedPackage(packageData);
+    setShowDeleteDialog(true);
+  };
+
+  const confirmDeletePackage = async () => {
+    if (!selectedPackage) return;
+
+    try {
+      await deletePackage(selectedPackage.id);
+      toast({
+        title: "Package deleted",
+        description: "The package namespace and all its versions have been deleted.",
+      });
+      setShowDeleteDialog(false);
+      setSelectedPackage(null);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      toast({
+        title: "Delete failed",
+        description: `Unable to delete package: ${errorMessage}`,
+        variant: "destructive",
+      });
+    }
   };
 
   const totalDownloads = userPackages.reduce((sum, pkg) => sum + pkg.total_downloads, 0);
@@ -118,7 +155,7 @@ const Dashboard: React.FC = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-gray-900">
             <Package className="h-5 w-5" />
-            My Packages
+            My Package Namespaces
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -130,7 +167,7 @@ const Dashboard: React.FC = () => {
             <div className="h-40 flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg">
               <div className="text-center">
                 <Package className="h-12 w-12 text-gray-400 mx-auto mb-2" />
-                <p className="text-gray-500">Your packages will appear here</p>
+                <p className="text-gray-500">Your package namespaces will appear here</p>
                 <p className="text-sm text-gray-400">Create your first package to get started</p>
               </div>
             </div>
@@ -138,13 +175,13 @@ const Dashboard: React.FC = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
+                  <TableHead>Namespace</TableHead>
                   <TableHead>Latest Version</TableHead>
                   <TableHead>License</TableHead>
                   <TableHead>Downloads</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Updated</TableHead>
-                  <TableHead className="w-[50px]"></TableHead>
+                  <TableHead className="w-[50px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -152,13 +189,33 @@ const Dashboard: React.FC = () => {
                   <TableRow key={pkg.id}>
                     <TableCell className="font-medium">
                       <div>
-                        <div className="font-semibold">{pkg.name}</div>
-                        <div className="text-sm text-gray-500">{pkg.description}</div>
+                        <div className="font-semibold text-blue-600">{pkg.name}</div>
+                        <div className="text-sm text-gray-500 line-clamp-1">{pkg.description}</div>
+                        <div className="text-xs text-gray-400 mt-1">
+                          <a 
+                            href={pkg.github_repo} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="hover:text-blue-600"
+                          >
+                            {pkg.github_repo}
+                          </a>
+                        </div>
                       </div>
                     </TableCell>
-                    <TableCell>{pkg.latest_version || 'No versions'}</TableCell>
-                    <TableCell>{pkg.license}</TableCell>
-                    <TableCell>{pkg.total_downloads}</TableCell>
+                    <TableCell>
+                      <span className={`px-2 py-1 text-xs rounded-full ${
+                        pkg.latest_version ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+                      }`}>
+                        {pkg.latest_version || 'No versions'}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-sm font-mono bg-gray-100 px-2 py-1 rounded">
+                        {pkg.license}
+                      </span>
+                    </TableCell>
+                    <TableCell>{pkg.total_downloads.toLocaleString()}</TableCell>
                     <TableCell>
                       <span className={`px-2 py-1 text-xs rounded-full ${
                         pkg.status === 'approved' ? 'bg-green-100 text-green-800' :
@@ -169,18 +226,32 @@ const Dashboard: React.FC = () => {
                         {pkg.status}
                       </span>
                     </TableCell>
-                    <TableCell>{new Date(pkg.updated_at).toLocaleDateString()}</TableCell>
+                    <TableCell className="text-sm text-gray-500">
+                      {new Date(pkg.updated_at).toLocaleDateString()}
+                    </TableCell>
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm">
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                             <MoreVertical className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
+                        <DropdownMenuContent align="end" className="w-48">
                           <DropdownMenuItem onClick={() => handleAddVersion(pkg)}>
                             <GitBranch className="h-4 w-4 mr-2" />
                             Add New Version
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleManageVersions(pkg)}>
+                            <Settings className="h-4 w-4 mr-2" />
+                            Manage Versions
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem 
+                            onClick={() => handleDeletePackage(pkg)}
+                            className="text-red-600 focus:text-red-600"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete Package
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -208,6 +279,38 @@ const Dashboard: React.FC = () => {
           }}
         />
       )}
+
+      {/* Version Management Form Modal */}
+      {showVersionManagement && selectedPackage && (
+        <VersionManagementForm 
+          package={selectedPackage}
+          onClose={() => {
+            setShowVersionManagement(false);
+            setSelectedPackage(null);
+          }}
+        />
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the package namespace "{selectedPackage?.name}" and all its versions.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDeletePackage}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete Package
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
