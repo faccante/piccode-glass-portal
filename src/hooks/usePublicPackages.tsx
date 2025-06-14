@@ -26,23 +26,9 @@ export const usePublicPackages = () => {
   const { data: packages = [], isLoading: loading, refetch: fetchPackages } = useQuery({
     queryKey: ['public-packages'],
     queryFn: async () => {
-      console.log('Fetching public packages...');
+      console.log('Fetching all packages...');
       
-      // First, let's try a simple query without joins to see if we have any approved packages
-      const { data: simpleData, error: simpleError } = await supabase
-        .from('package_namespaces')
-        .select('*')
-        .eq('status', 'approved');
-
-      console.log('Simple query result:', simpleData, 'Error:', simpleError);
-
-      // If no approved packages, return empty array
-      if (!simpleData || simpleData.length === 0) {
-        console.log('No approved packages found');
-        return [];
-      }
-
-      // Now fetch with profile join
+      // Fetch all packages with profile join
       const { data, error } = await supabase
         .from('package_namespaces')
         .select(`
@@ -53,20 +39,15 @@ export const usePublicPackages = () => {
             avatar_url
           )
         `)
-        .eq('status', 'approved')
         .order('created_at', { ascending: false })
         .limit(30);
 
       if (error) {
-        console.error('Error fetching public packages with profiles:', error);
-        // Return simple data without profiles if join fails
-        return simpleData.slice(0, 30).map(pkg => ({
-          ...pkg,
-          latest_version: '1.0.0'
-        })) as PublicPackage[];
+        console.error('Error fetching packages:', error);
+        throw error;
       }
 
-      console.log('Public packages with profiles:', data);
+      console.log('Packages with profiles:', data);
 
       // Get latest version for each package
       const packagesWithVersions = await Promise.all(
