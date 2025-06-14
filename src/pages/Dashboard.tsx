@@ -124,6 +124,10 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  const handleRefreshPackages = () => {
+    fetchPackages();
+  };
+
   const formatFileSize = (bytes?: number) => {
     if (!bytes) return 'Unknown';
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
@@ -239,7 +243,7 @@ const Dashboard: React.FC = () => {
                 <p className="text-gray-500">Your package namespaces will appear here</p>
                 <p className="text-sm text-gray-400">Create your first package to get started</p>
                 <Button 
-                  onClick={fetchPackages} 
+                  onClick={handleRefreshPackages} 
                   variant="outline" 
                   className="mt-4"
                 >
