@@ -45,6 +45,7 @@ export type Database = {
         Row: {
           approved_at: string | null
           approved_by: string | null
+          approved_by_email: string | null
           author_email: string
           author_id: string
           created_at: string
@@ -60,6 +61,7 @@ export type Database = {
         Insert: {
           approved_at?: string | null
           approved_by?: string | null
+          approved_by_email?: string | null
           author_email: string
           author_id: string
           created_at?: string
@@ -75,6 +77,7 @@ export type Database = {
         Update: {
           approved_at?: string | null
           approved_by?: string | null
+          approved_by_email?: string | null
           author_email?: string
           author_id?: string
           created_at?: string
@@ -187,8 +190,19 @@ export type Database = {
         Args: { username: string }
         Returns: string
       }
+      search_profiles_by_email: {
+        Args: { search_email: string }
+        Returns: {
+          id: string
+          email: string
+          full_name: string
+          role: string
+          avatar_url: string
+        }[]
+      }
     }
     Enums: {
+      app_role: "user" | "manager" | "moderator"
       application_status: "pending" | "reviewed" | "accepted" | "rejected"
       job_status: "active" | "closed" | "draft"
       user_role: "job_seeker" | "employer"
@@ -307,6 +321,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: ["user", "manager", "moderator"],
       application_status: ["pending", "reviewed", "accepted", "rejected"],
       job_status: ["active", "closed", "draft"],
       user_role: ["job_seeker", "employer"],
