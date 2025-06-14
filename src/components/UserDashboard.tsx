@@ -1,282 +1,510 @@
-
 import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Package, Download, User, Calendar, Plus, Settings, Trash2, Upload } from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import { usePackages } from '@/hooks/usePackages';
-import PackageUploadForm from '@/components/PackageUploadForm';
-import VersionManagementForm from '@/components/VersionManagementForm';
+import { Package, BarChart3, Download, Users, Plus, MoreVertical, GitBranch, Trash2, Settings, ChevronDown, ChevronRight } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import PackageCreateForm from '@/components/PackageCreateForm';
 import VersionUploadForm from '@/components/VersionUploadForm';
-import DownloadAnalyticsCard from '@/components/DownloadAnalyticsCard';
+import VersionManagementForm from '@/components/VersionManagementForm';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 const UserDashboard: React.FC = () => {
-  const { user, profile } = useAuth();
-  const { deletePackage } = usePackages();
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showVersionForm, setShowVersionForm] = useState(false);
+  const [showVersionManagement, setShowVersionManagement] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [selectedPackage, setSelectedPackage] = useState<any>(null);
+  const [packageVersions, setPackageVersions] = useState<Record<string, any[]>>({});
+  const [loadingVersions, setLoadingVersions] = useState<Record<string, boolean>>({});
+  const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [showUploadForm, setShowUploadForm] = useState(false);
-  const [showVersionForm, setShowVersionForm] = useState<any>(null);
-  const [showVersionUploadForm, setShowVersionUploadForm] = useState<any>(null);
 
-  // Fetch user's packages
-  const { data: userPackages = [], isLoading } = useQuery({
+  // Fetch user's packages (all statuses, not just approved)
+  const { data: packages = [], isLoading: loading, refetch: fetchPackages } = useQuery({
     queryKey: ['user-packages', user?.id],
     queryFn: async () => {
       if (!user?.id) return [];
 
+      console.log('Fetching user packages for user ID:', user.id);
+
       const { data, error } = await supabase
         .from('package_namespaces')
-        .select('*')
+        .select(`
+          *,
+          profiles!package_namespaces_author_id_fkey (
+            full_name,
+            email,
+            avatar_url
+          )
+        `)
         .eq('author_id', user.id)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      return data;
+      if (error) {
+        console.error('Error fetching user packages:', error);
+        throw error;
+      }
+
+      console.log('User packages data:', data);
+
+      // Get latest version for each package
+      const packagesWithVersions = await Promise.all(
+        data.map(async (pkg) => {
+          const { data: versions, error: versionError } = await supabase
+            .from('package_versions')
+            .select('version, created_at')
+            .eq('package_namespace_id', pkg.id)
+            .order('created_at', { ascending: false })
+            .limit(1);
+
+          if (versionError) {
+            console.error('Error fetching versions for package:', pkg.id, versionError);
+          }
+
+          return {
+            ...pkg,
+            latest_version: versions && versions.length > 0 ? versions[0].version : undefined
+          };
+        })
+      );
+
+      console.log('User packages with versions:', packagesWithVersions);
+      return packagesWithVersions;
     },
     enabled: !!user?.id,
   });
 
-  const handleDeletePackage = async (packageId: string, packageName: string) => {
-    if (!confirm(`Are you sure you want to delete the package "${packageName}"? This action cannot be undone.`)) {
+  const userPackages = packages;
+
+  const fetchPackageVersions = async (packageId: string) => {
+    if (packageVersions[packageId]) {
       return;
     }
 
+    setLoadingVersions(prev => ({ ...prev, [packageId]: true }));
+    
     try {
-      await deletePackage(packageId);
+      const { data, error } = await supabase
+        .from('package_versions')
+        .select('*')
+        .eq('package_namespace_id', packageId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      setPackageVersions(prev => ({
+        ...prev,
+        [packageId]: data || []
+      }));
+    } catch (error) {
+      console.error('Error fetching versions:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load package versions",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingVersions(prev => ({ ...prev, [packageId]: false }));
+    }
+  };
+
+  const handleAddVersion = (packageData: any) => {
+    setSelectedPackage(packageData);
+    setShowVersionForm(true);
+  };
+
+  const handleManageVersions = (packageData: any) => {
+    setSelectedPackage(packageData);
+    setShowVersionManagement(true);
+  };
+
+  const handleDeletePackage = (packageData: any) => {
+    setSelectedPackage(packageData);
+    setShowDeleteDialog(true);
+  };
+
+  const confirmDeletePackage = async () => {
+    if (!selectedPackage) return;
+
+    try {
+      const { error: versionsError } = await supabase
+        .from('package_versions')
+        .delete()
+        .eq('package_namespace_id', selectedPackage.id);
+
+      if (versionsError) throw versionsError;
+
+      const { error } = await supabase
+        .from('package_namespaces')
+        .delete()
+        .eq('id', selectedPackage.id)
+        .eq('author_id', user?.id);
+
+      if (error) throw error;
+
       toast({
         title: "Package deleted",
-        description: `Package "${packageName}" has been deleted successfully.`,
+        description: "The package namespace and all its versions have been deleted.",
       });
+
+      queryClient.invalidateQueries({ queryKey: ['user-packages', user?.id] });
       
-      // Refresh the packages list
-      queryClient.invalidateQueries({ queryKey: ['user-packages'] });
+      setShowDeleteDialog(false);
+      setSelectedPackage(null);
     } catch (error) {
-      console.error('Error deleting package:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       toast({
         title: "Delete failed",
-        description: "Unable to delete the package. Please try again.",
+        description: `Unable to delete package: ${errorMessage}`,
         variant: "destructive",
       });
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'approved': return 'bg-green-500/20 text-green-300 border-green-500/50';
-      case 'pending': return 'bg-yellow-500/20 text-yellow-300 border-yellow-500/50';
-      case 'reviewing': return 'bg-blue-500/20 text-blue-300 border-blue-500/50';
-      case 'rejected': return 'bg-red-500/20 text-red-300 border-red-500/50';
-      default: return 'bg-gray-500/20 text-gray-300 border-gray-500/50';
+  const handleCreateFormClose = () => {
+    setShowCreateForm(false);
+    fetchPackages();
+  };
+
+  const handleVersionUploaded = () => {
+    fetchPackages();
+    if (selectedPackage) {
+      setPackageVersions(prev => {
+        const newVersions = { ...prev };
+        delete newVersions[selectedPackage.id];
+        return newVersions;
+      });
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
+  const handleRefreshPackages = () => {
+    fetchPackages();
+  };
+
+  const formatFileSize = (bytes?: number) => {
+    if (!bytes) return 'Unknown';
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
   };
 
   const totalDownloads = userPackages.reduce((sum, pkg) => sum + (pkg.total_downloads || 0), 0);
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-8">
-      {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="glass-card">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">My Packages</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{userPackages.length}</div>
-            <p className="text-xs text-muted-foreground">Published packages</p>
-          </CardContent>
-        </Card>
-
-        <Card className="glass-card">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Downloads</CardTitle>
-            <Download className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalDownloads}</div>
-            <p className="text-xs text-muted-foreground">Across all packages</p>
-          </CardContent>
-        </Card>
-
-        <Card className="glass-card">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Approved</CardTitle>
-            <Package className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-500">
-              {userPackages.filter(pkg => pkg.status === 'approved').length}
-            </div>
-            <p className="text-xs text-muted-foreground">Live packages</p>
-          </CardContent>
-        </Card>
-
-        <Card className="glass-card">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending</CardTitle>
-            <Package className="h-4 w-4 text-yellow-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-500">
-              {userPackages.filter(pkg => pkg.status === 'pending').length}
-            </div>
-            <p className="text-xs text-muted-foreground">Awaiting review</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Download Analytics */}
-      <DownloadAnalyticsCard />
-
-      {/* Upload Package Button */}
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">My Packages</h2>
-        <Button 
-          onClick={() => setShowUploadForm(true)}
-          className="bg-primary hover:bg-primary/90"
+    <div className="space-y-8 py-8">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+          <p className="text-gray-600">Manage your packages and view analytics</p>
+        </div>
+        <Button
+          onClick={() => setShowCreateForm(true)}
+          className="bg-blue-600 text-white hover:bg-blue-700"
         >
           <Plus className="h-4 w-4 mr-2" />
-          Upload Package
+          Create Package
         </Button>
       </div>
 
-      {/* Packages List */}
-      {userPackages.length === 0 ? (
-        <Card className="glass-card">
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Package className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-medium mb-2">No packages yet</h3>
-            <p className="text-muted-foreground text-center mb-4">
-              Upload your first package to get started with PiccodeScript Registry
+      {/* Stats Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <Card className="bg-white/70 backdrop-blur-sm border border-gray-200">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">Total Packages</CardTitle>
+            <Package className="h-4 w-4 text-gray-400" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-gray-900">{userPackages.length}</div>
+            <p className="text-xs text-gray-500">
+              {userPackages.length === 0 ? 'No packages created' : 'Your published packages'}
             </p>
-            <Button onClick={() => setShowUploadForm(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Upload Your First Package
-            </Button>
           </CardContent>
         </Card>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {userPackages.map((pkg) => (
-            <Card key={pkg.id} className="glass-card">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <CardTitle className="text-lg mb-2">{pkg.name}</CardTitle>
-                    <CardDescription className="text-sm">
-                      {pkg.description}
-                    </CardDescription>
-                  </div>
-                  <Badge className={getStatusColor(pkg.status)}>
-                    {pkg.status}
-                  </Badge>
-                </div>
-              </CardHeader>
 
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between text-sm text-muted-foreground">
-                  <div className="flex items-center gap-1">
-                    <User className="h-4 w-4" />
-                    <span>{profile?.full_name || user?.email}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Calendar className="h-4 w-4" />
-                    <span>{formatDate(pkg.created_at)}</span>
-                  </div>
-                </div>
+        <Card className="bg-white/70 backdrop-blur-sm border border-gray-200">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">Total Downloads</CardTitle>
+            <Download className="h-4 w-4 text-gray-400" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-gray-900">{totalDownloads}</div>
+            <p className="text-xs text-gray-500">
+              {totalDownloads === 0 ? 'No downloads yet' : 'Across all packages'}
+            </p>
+          </CardContent>
+        </Card>
 
-                <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                  <Download className="h-4 w-4" />
-                  <span>{pkg.total_downloads || 0} downloads</span>
-                </div>
+        <Card className="bg-white/70 backdrop-blur-sm border border-gray-200">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">Active Users</CardTitle>
+            <Users className="h-4 w-4 text-gray-400" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-gray-900">0</div>
+            <p className="text-xs text-gray-500">No active users</p>
+          </CardContent>
+        </Card>
 
-                <div className="flex gap-2">
-                  <Button
-                    onClick={() => setShowVersionForm(pkg)}
-                    variant="outline"
-                    size="sm"
-                    className="flex-1"
+        <Card className="bg-white/70 backdrop-blur-sm border border-gray-200">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">Growth Rate</CardTitle>
+            <BarChart3 className="h-4 w-4 text-gray-400" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-gray-900">0%</div>
+            <p className="text-xs text-gray-500">No data available</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Analytics Chart */}
+      <Card className="bg-white/70 backdrop-blur-sm border border-gray-200">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-gray-900">
+            <BarChart3 className="h-5 w-5" />
+            Analytics Overview
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-64 flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg">
+            <div className="text-center">
+              <BarChart3 className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+              <p className="text-gray-500">Analytics chart will appear here</p>
+              <p className="text-sm text-gray-400">Create packages to see data</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Package List with Expandable Versions */}
+      <Card className="bg-white/70 backdrop-blur-sm border border-gray-200">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-gray-900">
+            <Package className="h-5 w-5" />
+            My Package Namespaces
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="h-40 flex items-center justify-center">
+              <p className="text-gray-500">Loading packages...</p>
+            </div>
+          ) : userPackages.length === 0 ? (
+            <div className="h-40 flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg">
+              <div className="text-center">
+                <Package className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+                <p className="text-gray-500">Your package namespaces will appear here</p>
+                <p className="text-sm text-gray-400">Create your first package to get started</p>
+                <Button 
+                  onClick={handleRefreshPackages} 
+                  variant="outline" 
+                  className="mt-4"
+                >
+                  Refresh
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <Accordion type="multiple" className="w-full">
+              {userPackages.map((pkg) => (
+                <AccordionItem key={pkg.id} value={pkg.id}>
+                  <AccordionTrigger 
+                    className="hover:no-underline"
+                    onClick={() => fetchPackageVersions(pkg.id)}
                   >
-                    <Settings className="h-4 w-4 mr-1" />
-                    Manage
-                  </Button>
-                  
-                  <Button
-                    onClick={() => setShowVersionUploadForm(pkg)}
-                    variant="outline"
-                    size="sm"
-                    className="flex-1"
-                  >
-                    <Upload className="h-4 w-4 mr-1" />
-                    Add Version
-                  </Button>
-                  
-                  <Button
-                    onClick={() => handleDeletePackage(pkg.id, pkg.name)}
-                    variant="outline"
-                    size="sm"
-                    className="text-red-500 hover:text-red-400 hover:bg-red-500/10"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                    <div className="flex items-center justify-between w-full pr-4">
+                      <div className="flex items-center space-x-4">
+                        <div className="text-left">
+                          <div className="font-semibold text-blue-600">{pkg.name}</div>
+                          <div className="text-sm text-gray-500 line-clamp-1">{pkg.description}</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-4">
+                        <span className={`px-2 py-1 text-xs rounded-full ${
+                          pkg.latest_version ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+                        }`}>
+                          {pkg.latest_version || 'No versions'}
+                        </span>
+                        <span className={`px-2 py-1 text-xs rounded-full ${
+                          pkg.status === 'approved' ? 'bg-green-100 text-green-800' :
+                          pkg.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                          pkg.status === 'reviewing' ? 'bg-blue-100 text-blue-800' :
+                          'bg-red-100 text-red-800'
+                        }`}>
+                          {pkg.status}
+                        </span>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-48">
+                            <DropdownMenuItem onClick={() => handleAddVersion(pkg)}>
+                              <GitBranch className="h-4 w-4 mr-2" />
+                              Add New Version
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleManageVersions(pkg)}>
+                              <Settings className="h-4 w-4 mr-2" />
+                              Manage Versions
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem 
+                              onClick={() => handleDeletePackage(pkg)}
+                              className="text-red-600 focus:text-red-600"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete Package
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <div className="px-6 pb-4">
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                          <div>
+                            <span className="text-gray-500">License:</span>
+                            <div className="font-mono bg-gray-100 px-2 py-1 rounded mt-1">{pkg.license}</div>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Downloads:</span>
+                            <div className="font-semibold mt-1">{pkg.total_downloads.toLocaleString()}</div>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Updated:</span>
+                            <div className="mt-1">{new Date(pkg.updated_at).toLocaleDateString()}</div>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Repository:</span>
+                            <div className="mt-1">
+                              <a 
+                                href={pkg.github_repo} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:underline text-xs"
+                              >
+                                {pkg.github_repo}
+                              </a>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="border-t pt-4">
+                          <h4 className="font-semibold mb-3 flex items-center gap-2">
+                            <GitBranch className="h-4 w-4" />
+                            Versions
+                          </h4>
+                          {loadingVersions[pkg.id] ? (
+                            <div className="text-center py-4">
+                              <p className="text-gray-500">Loading versions...</p>
+                            </div>
+                          ) : packageVersions[pkg.id]?.length > 0 ? (
+                            <div className="space-y-2">
+                              {packageVersions[pkg.id].map((version) => (
+                                <div key={version.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                  <div className="flex items-center space-x-3">
+                                    <span className="font-mono bg-blue-50 px-2 py-1 rounded text-blue-800 text-sm">
+                                      v{version.version}
+                                    </span>
+                                    <span className="text-sm text-gray-500">
+                                      {formatFileSize(version.jar_file_size)}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center space-x-3">
+                                    <span className="text-sm text-gray-500">
+                                      {version.downloads} downloads
+                                    </span>
+                                    <span className="text-xs text-gray-400">
+                                      {new Date(version.created_at).toLocaleDateString()}
+                                    </span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="text-center py-8 border-2 border-dashed border-gray-200 rounded-lg">
+                              <GitBranch className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                              <p className="text-gray-500">No versions uploaded yet</p>
+                              <p className="text-sm text-gray-400 mb-3">Upload your first version to get started</p>
+                              <Button 
+                                onClick={() => handleAddVersion(pkg)}
+                                size="sm"
+                                className="bg-blue-600 hover:bg-blue-700 text-white"
+                              >
+                                <Plus className="h-4 w-4 mr-2" />
+                                Add Version
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Create Package Form Modal */}
+      {showCreateForm && (
+        <PackageCreateForm onClose={handleCreateFormClose} />
       )}
 
-      {/* Upload Package Form */}
-      {showUploadForm && (
-        <PackageUploadForm
-          onClose={() => setShowUploadForm(false)}
-          onPackageUploaded={() => {
-            queryClient.invalidateQueries({ queryKey: ['user-packages'] });
-            setShowUploadForm(false);
+      {/* Version Upload Form Modal */}
+      {showVersionForm && selectedPackage && (
+        <VersionUploadForm 
+          package={selectedPackage}
+          onClose={() => {
+            setShowVersionForm(false);
+            setSelectedPackage(null);
+          }}
+          onVersionUploaded={handleVersionUploaded}
+        />
+      )}
+
+      {/* Version Management Form Modal */}
+      {showVersionManagement && selectedPackage && (
+        <VersionManagementForm 
+          package={selectedPackage}
+          onClose={() => {
+            setShowVersionManagement(false);
+            setSelectedPackage(null);
           }}
         />
       )}
 
-      {/* Version Management Form */}
-      {showVersionForm && (
-        <VersionManagementForm
-          package={showVersionForm}
-          onClose={() => setShowVersionForm(null)}
-        />
-      )}
-
-      {/* Version Upload Form */}
-      {showVersionUploadForm && (
-        <VersionUploadForm
-          package={showVersionUploadForm}
-          onClose={() => setShowVersionUploadForm(null)}
-          onVersionUploaded={() => {
-            queryClient.invalidateQueries({ queryKey: ['user-packages'] });
-            setShowVersionUploadForm(null);
-          }}
-        />
-      )}
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the package namespace "{selectedPackage?.name}" and all its versions.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDeletePackage}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete Package
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

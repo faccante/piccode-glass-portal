@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -10,7 +9,6 @@ import { usePackages, PackageNamespace } from '@/hooks/usePackages';
 import { useToast } from '@/hooks/use-toast';
 import PackageInstallChart from '@/components/PackageInstallChart';
 import Avatar from '@/components/Avatar';
-import CopyableInstallCommand from '@/components/CopyableInstallCommand';
 
 const PackageDetail = () => {
   const { packageId } = useParams<{ packageId: string }>();
@@ -50,9 +48,6 @@ const PackageDetail = () => {
         title: "Download started",
         description: `Package ${packageData?.name} v${version} download recorded`,
       });
-      
-      // Refresh package data to show updated download counts
-      await fetchPackageData();
     } catch (error) {
       toast({
         title: "Download failed",
@@ -89,8 +84,6 @@ const PackageDetail = () => {
     );
   }
 
-  const latestVersion = packageData.versions?.[0];
-
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -126,11 +119,9 @@ const PackageDetail = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <CopyableInstallCommand 
-                packageName={packageData.name}
-                versionId={latestVersion?.id}
-                onDownloadTracked={fetchPackageData}
-              />
+              <div className="bg-black/20 p-4 rounded-lg font-mono text-sm">
+                <code>picoc install {packageData.name}</code>
+              </div>
             </CardContent>
           </Card>
 
