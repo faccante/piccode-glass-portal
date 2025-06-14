@@ -134,7 +134,7 @@ export const usePackages = () => {
     // First, get the package namespace ID from the version
     const { data: versionData, error: versionError } = await supabase
       .from('package_versions')
-      .select('package_namespace_id')
+      .select('package_namespace_id, jar_file_url')
       .eq('id', versionId)
       .single();
 
@@ -188,6 +188,17 @@ export const usePackages = () => {
       .eq('id', versionData.package_namespace_id);
 
     if (namespaceUpdateError) throw namespaceUpdateError;
+
+    // Actually download the file if jar_file_url exists
+    if (versionData.jar_file_url) {
+      // Create a temporary anchor element to trigger download
+      const link = document.createElement('a');
+      link.href = versionData.jar_file_url;
+      link.download = versionData.jar_file_url.split('/').pop() || 'package.jar';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
 
     // Invalidate queries to refresh download counts
     queryClient.invalidateQueries({ queryKey: ['packages'] });

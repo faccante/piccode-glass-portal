@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -8,6 +7,7 @@ import { Settings, Download, Trash2, Package } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { usePackages } from '@/hooks/usePackages';
 
 interface VersionManagementFormProps {
   package: any;
@@ -29,6 +29,7 @@ const VersionManagementForm: React.FC<VersionManagementFormProps> = ({ package: 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedVersion, setSelectedVersion] = useState<PackageVersion | null>(null);
   const { user } = useAuth();
+  const { recordDownload } = usePackages();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -104,22 +105,13 @@ const VersionManagementForm: React.FC<VersionManagementFormProps> = ({ package: 
     }
 
     try {
-      // Record the download
-      await supabase
-        .from('download_analytics')
-        .insert({
-          package_id: version.id,
-          user_agent: navigator.userAgent
-        });
-
-      // Update download count
-      await supabase
-        .from('package_versions')
-        .update({ downloads: version.downloads + 1 })
-        .eq('id', version.id);
-
-      // Trigger download
-      window.open(version.jar_file_url, '_blank');
+      // Use the recordDownload function from usePackages hook which handles everything
+      await recordDownload(version.id);
+      
+      toast({
+        title: "Download started",
+        description: `Version ${version.version} download started`,
+      });
       
       // Refresh versions to show updated download count
       await fetchVersions();

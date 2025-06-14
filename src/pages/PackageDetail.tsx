@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -48,8 +49,10 @@ const PackageDetail = () => {
       await recordDownload(versionId);
       toast({
         title: "Download started",
-        description: `Package ${packageData?.name} v${version} download recorded`,
+        description: `Package ${packageData?.name} v${version} download started`,
       });
+      // Refresh package data to show updated download counts
+      await fetchPackageData();
     } catch (error) {
       toast({
         title: "Download failed",
