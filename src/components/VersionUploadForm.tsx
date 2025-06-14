@@ -41,36 +41,21 @@ const VersionUploadForm: React.FC<VersionUploadFormProps> = ({ package: pkg, onC
     }
   };
 
-  const uploadFileToStorage = async (file: File, fileName: string): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      
-      xhr.upload.addEventListener('progress', (event) => {
-        if (event.lengthComputable) {
-          const progress = Math.round((event.loaded / event.total) * 100);
-          setUploadProgress(progress);
-        }
-      });
-
-      xhr.addEventListener('load', () => {
-        if (xhr.status === 200) {
-          // For now, we'll return a placeholder URL since we don't have storage bucket set up
-          // In a real implementation, this would return the actual storage URL
-          resolve(`${fileName}-${Date.now()}`);
+  const simulateFileUpload = async (file: File): Promise<string> => {
+    return new Promise((resolve) => {
+      let progress = 0;
+      const interval = setInterval(() => {
+        progress += Math.random() * 15;
+        if (progress >= 100) {
+          progress = 100;
+          clearInterval(interval);
+          setUploadProgress(100);
+          // Simulate a file URL - in production this would be actual file storage
+          resolve(`uploads/${pkg.name}/${formData.version}/${file.name}`);
         } else {
-          reject(new Error('Upload failed'));
+          setUploadProgress(Math.round(progress));
         }
-      });
-
-      xhr.addEventListener('error', () => {
-        reject(new Error('Upload failed'));
-      });
-
-      // Simulate file upload for now
-      setTimeout(() => {
-        setUploadProgress(100);
-        resolve(`${fileName}-${Date.now()}`);
-      }, 1000);
+      }, 100);
     });
   };
 
@@ -108,23 +93,29 @@ const VersionUploadForm: React.FC<VersionUploadFormProps> = ({ package: pkg, onC
     setUploadProgress(0);
 
     try {
+      console.log('Creating version for package:', pkg.id);
+      console.log('Version data:', {
+        package_namespace_id: pkg.id,
+        version: formData.version.trim(),
+        jar_file_size: formData.jarFile.size
+      });
+
       // Check if version already exists
       const { data: existingVersion } = await supabase
         .from('package_versions')
         .select('id')
         .eq('package_namespace_id', pkg.id)
         .eq('version', formData.version.trim())
-        .single();
+        .maybeSingle();
 
       if (existingVersion) {
         throw new Error('Version already exists');
       }
 
-      // Upload file (simulated for now)
-      const fileName = `${pkg.name}-${formData.version}-${formData.jarFile.name}`;
-      const fileUrl = await uploadFileToStorage(formData.jarFile, fileName);
+      // Simulate file upload with progress
+      const fileUrl = await simulateFileUpload(formData.jarFile);
 
-      // Create version record in database
+      // Create version record in database with correct field names
       const { data: newVersion, error } = await supabase
         .from('package_versions')
         .insert({
@@ -136,7 +127,12 @@ const VersionUploadForm: React.FC<VersionUploadFormProps> = ({ package: pkg, onC
         .select()
         .single();
 
-      if (error) throw error;
+      console.log('Version creation result:', { newVersion, error });
+
+      if (error) {
+        console.error('Database error:', error);
+        throw error;
+      }
 
       toast({
         title: "Version uploaded successfully",
@@ -232,7 +228,7 @@ const VersionUploadForm: React.FC<VersionUploadFormProps> = ({ package: pkg, onC
             {loading && uploadProgress > 0 && (
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span>Uploading...</span>
+                  <span>Uploading JAR file...</span>
                   <span>{uploadProgress}%</span>
                 </div>
                 <Progress value={uploadProgress} className="w-full" />
@@ -265,7 +261,7 @@ const VersionUploadForm: React.FC<VersionUploadFormProps> = ({ package: pkg, onC
             </Button>
             <Button
               type="submit"
-              disabled={loading}
+              disabled={loading || !formData.jarFile || !formData.version.trim()}
               className="bg-blue-600 hover:bg-blue-700 text-white flex-1"
             >
               {loading ? 'Uploading...' : 'Upload Version'}
