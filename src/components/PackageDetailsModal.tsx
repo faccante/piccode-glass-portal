@@ -1,13 +1,17 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Download, Github, Calendar, User, Package, CheckCircle, XCircle } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useToast } from '@/hooks/use-toast';
+import { Download, Github, Calendar, User, Package, CheckCircle, XCircle, AlertTriangle, UserX } from 'lucide-react';
 import { ManagerPackage } from '@/hooks/useManagerPackages';
 import Avatar from '@/components/Avatar';
 import CopyableInstallCommand from '@/components/CopyableInstallCommand';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
 interface PackageDetailsModalProps {
   package: ManagerPackage | null;
@@ -16,6 +20,7 @@ interface PackageDetailsModalProps {
   onApprove?: (pkg: ManagerPackage) => void;
   onReject?: (pkg: ManagerPackage) => void;
   isUpdatingStatus?: boolean;
+  onRefresh?: () => void;
 }
 
 const PackageDetailsModal: React.FC<PackageDetailsModalProps> = ({
@@ -24,8 +29,15 @@ const PackageDetailsModal: React.FC<PackageDetailsModalProps> = ({
   onClose,
   onApprove,
   onReject,
-  isUpdatingStatus = false
+  isUpdatingStatus = false,
+  onRefresh
 }) => {
+  const [selectedStatus, setSelectedStatus] = useState('');
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isBanningUser, setIsBanningUser] = useState(false);
+  const { user } = useAuth();
+  const { toast } = useToast();
+
   if (!pkg) return null;
 
   const getStatusColor = (status: string) => {
@@ -34,6 +46,7 @@ const PackageDetailsModal: React.FC<PackageDetailsModalProps> = ({
       case 'pending': return 'bg-yellow-500/20 text-yellow-300 border-yellow-500/50';
       case 'reviewing': return 'bg-blue-500/20 text-blue-300 border-blue-500/50';
       case 'rejected': return 'bg-red-500/20 text-red-300 border-red-500/50';
+      case 'banned': return 'bg-red-600/20 text-red-400 border-red-600/50';
       default: return 'bg-gray-500/20 text-gray-300 border-gray-500/50';
     }
   };
@@ -46,6 +59,102 @@ const PackageDetailsModal: React.FC<PackageDetailsModalProps> = ({
       hour: '2-digit',
       minute: '2-digit'
     });
+  };
+
+  const handleStatusChange = async () => {
+    if (!selectedStatus || selectedStatus === pkg.status) {
+      toast({
+        title: "No changes made",
+        description: "Please select a different status.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUpdating(true);
+    try {
+      const updateData: any = {
+        status: selectedStatus,
+        updated_at: new Date().toISOString()
+      };
+
+      if (selectedStatus === 'approved') {
+        updateData.approved_at = new Date().toISOString();
+        updateData.approved_by = user?.id;
+        updateData.approved_by_email = user?.email;
+      }
+
+      const { error } = await supabase
+        .from('package_namespaces')
+        .update(updateData)
+        .eq('id', pkg.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Status updated",
+        description: `Package status changed to ${selectedStatus}.`,
+      });
+
+      onRefresh?.();
+      onClose();
+    } catch (error) {
+      console.error('Status update error:', error);
+      toast({
+        title: "Update failed",
+        description: "Failed to update package status",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleBanUser = async () => {
+    setIsBanningUser(true);
+    try {
+      // First, ban all packages by this user
+      const { error: packageError } = await supabase
+        .from('package_namespaces')
+        .update({ 
+          status: 'banned',
+          updated_at: new Date().toISOString()
+        })
+        .eq('author_email', pkg.author_email);
+
+      if (packageError) throw packageError;
+
+      // Update the user's role to 'banned' if they have a profile
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ 
+          role: 'banned',
+          updated_at: new Date().toISOString()
+        })
+        .eq('email', pkg.author_email);
+
+      // Don't throw error if profile doesn't exist, just log it
+      if (profileError) {
+        console.log('No profile found for user, continuing with package ban');
+      }
+
+      toast({
+        title: "User banned",
+        description: `All packages by ${pkg.author_email} have been banned.`,
+      });
+
+      onRefresh?.();
+      onClose();
+    } catch (error) {
+      console.error('Ban user error:', error);
+      toast({
+        title: "Ban failed",
+        description: "Failed to ban user",
+        variant: "destructive",
+      });
+    } finally {
+      setIsBanningUser(false);
+    }
   };
 
   return (
@@ -76,7 +185,7 @@ const PackageDetailsModal: React.FC<PackageDetailsModalProps> = ({
               <h3 className="text-lg font-semibold mb-3">Install Command</h3>
               <CopyableInstallCommand 
                 packageName={pkg.name} 
-                versionId="demo-version" // This would need to be the actual latest version ID
+                versionId="demo-version"
               />
             </div>
 
@@ -147,6 +256,49 @@ const PackageDetailsModal: React.FC<PackageDetailsModalProps> = ({
 
           {/* Sidebar */}
           <div className="space-y-6">
+            {/* Status Management */}
+            <div>
+              <h3 className="text-lg font-semibold mb-3">Package Management</h3>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-sm text-muted-foreground mb-2 block">Change Status:</label>
+                  <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select new status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="reviewing">Under Review</SelectItem>
+                      <SelectItem value="approved">Approved</SelectItem>
+                      <SelectItem value="rejected">Rejected</SelectItem>
+                      <SelectItem value="banned">Banned</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <Button
+                  onClick={handleStatusChange}
+                  disabled={isUpdating || !selectedStatus || selectedStatus === pkg.status}
+                  className="w-full"
+                >
+                  <AlertTriangle className="h-4 w-4 mr-2" />
+                  {isUpdating ? 'Updating...' : 'Update Status'}
+                </Button>
+
+                <Separator />
+
+                <Button
+                  onClick={handleBanUser}
+                  disabled={isBanningUser}
+                  variant="destructive"
+                  className="w-full"
+                >
+                  <UserX className="h-4 w-4 mr-2" />
+                  {isBanningUser ? 'Banning...' : 'Ban User & All Packages'}
+                </Button>
+              </div>
+            </div>
+
             {/* Actions */}
             <div>
               <h3 className="text-lg font-semibold mb-3">Actions</h3>
@@ -170,7 +322,7 @@ const PackageDetailsModal: React.FC<PackageDetailsModalProps> = ({
                         className="w-full bg-green-500/20 hover:bg-green-500/30 border border-green-500/50 text-green-400"
                       >
                         <CheckCircle className="h-4 w-4 mr-2" />
-                        {isUpdatingStatus ? 'Processing...' : 'Approve Package'}
+                        {isUpdatingStatus ? 'Processing...' : 'Quick Approve'}
                       </Button>
                       <Button
                         onClick={() => onReject(pkg)}
@@ -179,7 +331,7 @@ const PackageDetailsModal: React.FC<PackageDetailsModalProps> = ({
                         className="w-full"
                       >
                         <XCircle className="h-4 w-4 mr-2" />
-                        {isUpdatingStatus ? 'Processing...' : 'Reject Package'}
+                        {isUpdatingStatus ? 'Processing...' : 'Quick Reject'}
                       </Button>
                     </div>
                   </>

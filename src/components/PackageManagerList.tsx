@@ -135,6 +135,7 @@ const PackageManagerList: React.FC = () => {
       case 'pending': return 'bg-yellow-500/20 text-yellow-300 border-yellow-500/50';
       case 'reviewing': return 'bg-blue-500/20 text-blue-300 border-blue-500/50';
       case 'rejected': return 'bg-red-500/20 text-red-300 border-red-500/50';
+      case 'banned': return 'bg-red-600/20 text-red-400 border-red-600/50';
       default: return 'bg-gray-500/20 text-gray-300 border-gray-500/50';
     }
   };
@@ -189,6 +190,7 @@ const PackageManagerList: React.FC = () => {
                 <SelectItem value="reviewing">Under Review</SelectItem>
                 <SelectItem value="approved">Approved</SelectItem>
                 <SelectItem value="rejected">Rejected</SelectItem>
+                <SelectItem value="banned">Banned</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -375,6 +377,7 @@ const PackageManagerList: React.FC = () => {
         onApprove={handleApprove}
         onReject={handleReject}
         isUpdatingStatus={isUpdatingStatus}
+        onRefresh={loadPackages}
       />
     </div>
   );
