@@ -2,10 +2,9 @@
 import React, { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
 
-interface PackageInstallChartProps {
-  packageId?: string; // Optional - if not provided, shows all user packages
+interface PublicPackageInstallChartProps {
+  packageId: string;
 }
 
 interface ChartData {
@@ -13,56 +12,25 @@ interface ChartData {
   downloads: number;
 }
 
-const PackageInstallChart: React.FC<PackageInstallChartProps> = ({ packageId }) => {
+const PublicPackageInstallChart: React.FC<PublicPackageInstallChartProps> = ({ packageId }) => {
   const [data, setData] = useState<ChartData[]>([]);
   const [loading, setLoading] = useState(true);
-  const { user } = useAuth();
 
   useEffect(() => {
     const fetchDownloadData = async () => {
       try {
         setLoading(true);
         
-        if (!user?.id) {
-          setData([]);
-          return;
-        }
-
-        // Get user's packages
-        const { data: userPackages, error: packagesError } = await supabase
-          .from('package_namespaces')
-          .select('id')
-          .eq('author_id', user.id);
-
-        if (packagesError) throw packagesError;
-
-        if (!userPackages || userPackages.length === 0) {
-          setData([]);
-          return;
-        }
-
-        const packageIds = packageId ? [packageId] : userPackages.map(p => p.id);
-
-        // Get all package versions for user's packages
-        const { data: versions, error: versionsError } = await supabase
-          .from('package_versions')
-          .select('id')
-          .in('package_namespace_id', packageIds);
-
-        if (versionsError) throw versionsError;
-
-        if (!versions || versions.length === 0) {
-          setData([]);
-          return;
-        }
-
-        const versionIds = versions.map(v => v.id);
-
-        // Get download analytics for all user's packages
+        // Get download analytics for all versions of this package (no auth required)
         const { data: analytics, error } = await supabase
           .from('download_analytics')
-          .select('downloaded_at')
-          .in('package_id', versionIds)
+          .select(`
+            downloaded_at,
+            package_versions!inner (
+              package_namespace_id
+            )
+          `)
+          .eq('package_versions.package_namespace_id', packageId)
           .order('downloaded_at', { ascending: true });
 
         if (error) throw error;
@@ -85,21 +53,15 @@ const PackageInstallChart: React.FC<PackageInstallChartProps> = ({ packageId }) 
         setData(chartData);
       } catch (error) {
         console.error('Error fetching download data:', error);
-        // Show mock data for demo purposes
-        setData([
-          { date: '2024-01-01', downloads: 5 },
-          { date: '2024-01-02', downloads: 8 },
-          { date: '2024-01-03', downloads: 12 },
-          { date: '2024-01-04', downloads: 15 },
-          { date: '2024-01-05', downloads: 20 },
-        ]);
+        // Show empty state for errors
+        setData([]);
       } finally {
         setLoading(false);
       }
     };
 
     fetchDownloadData();
-  }, [packageId, user?.id]);
+  }, [packageId]);
 
   if (loading) {
     return <div className="h-64 flex items-center justify-center">Loading chart...</div>;
@@ -147,4 +109,4 @@ const PackageInstallChart: React.FC<PackageInstallChartProps> = ({ packageId }) 
   );
 };
 
-export default PackageInstallChart;
+export default PublicPackageInstallChart;

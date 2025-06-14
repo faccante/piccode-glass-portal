@@ -275,7 +275,7 @@ const UserDashboard: React.FC = () => {
         </CardHeader>
         <CardContent>
           {userPackages.length > 0 ? (
-            <PackageInstallChart packageId={userPackages[0].id} />
+            <PackageInstallChart />
           ) : (
             <div className="h-64 flex items-center justify-center text-muted-foreground">
               Create a package to see analytics

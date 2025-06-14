@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -9,6 +8,7 @@ import { ArrowLeft, Download, Github, User, Calendar, Package } from 'lucide-rea
 import { usePackages, PackageNamespace } from '@/hooks/usePackages';
 import { useToast } from '@/hooks/use-toast';
 import PackageInstallChart from '@/components/PackageInstallChart';
+import PublicPackageInstallChart from '@/components/PublicPackageInstallChart';
 import Avatar from '@/components/Avatar';
 import CopyableInstallCommand from '@/components/CopyableInstallCommand';
 
@@ -180,7 +180,7 @@ const PackageDetail = () => {
               <CardDescription>Download statistics over time</CardDescription>
             </CardHeader>
             <CardContent>
-              <PackageInstallChart packageId={packageData.id} />
+              <PublicPackageInstallChart packageId={packageData.id} />
             </CardContent>
           </Card>
         </div>
