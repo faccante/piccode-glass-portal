@@ -28,12 +28,12 @@ export const usePublicPackages = () => {
     queryFn: async () => {
       console.log('Fetching all packages...');
       
-      // Fetch all packages with profile join
+      // Fetch all packages with profile join using the specific foreign key relationship
       const { data, error } = await supabase
         .from('package_namespaces')
         .select(`
           *,
-          profiles (
+          profiles!package_namespaces_author_id_fkey (
             full_name,
             email,
             avatar_url
