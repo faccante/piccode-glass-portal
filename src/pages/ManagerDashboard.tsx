@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -23,7 +22,7 @@ interface PendingPackage {
 }
 
 const ManagerDashboard: React.FC = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [selectedPackage, setSelectedPackage] = useState<PendingPackage | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const { toast } = useToast();
@@ -117,8 +116,8 @@ const ManagerDashboard: React.FC = () => {
     }
   };
 
-  // Redirect if not manager
-  if (user?.role !== 'manager') {
+  // Redirect if not manager - check profile.role instead of user.role
+  if (profile?.role !== 'manager') {
     return (
       <div className="text-center py-16">
         <XCircle className="h-16 w-16 text-destructive mx-auto mb-4" />
