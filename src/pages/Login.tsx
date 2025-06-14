@@ -22,19 +22,19 @@ const Login: React.FC = () => {
     setLoading(true);
 
     try {
-      const success = await login(email, password);
-      if (success) {
+      const result = await login(email, password);
+      if (result.error) {
+        toast({
+          title: "Login failed",
+          description: result.error,
+          variant: "destructive",
+        });
+      } else {
         toast({
           title: "Login successful",
           description: "Welcome back to PiccodeScript Registry!",
         });
         navigate('/dashboard');
-      } else {
-        toast({
-          title: "Login failed",
-          description: "Invalid email or password. Please try again.",
-          variant: "destructive",
-        });
       }
     } catch (error) {
       toast({
@@ -48,11 +48,11 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center">
+    <div className="min-h-[80vh] flex items-center justify-center py-8">
       <Card className="glass-card w-full max-w-md">
         <CardHeader className="text-center">
           <Package className="h-12 w-12 text-primary mx-auto mb-4" />
-          <CardTitle className="text-2xl gradient-text">Welcome Back</CardTitle>
+          <CardTitle className="text-2xl text-foreground">Welcome Back</CardTitle>
           <CardDescription>
             Sign in to your PiccodeScript Registry account
           </CardDescription>
@@ -69,7 +69,7 @@ const Login: React.FC = () => {
                   placeholder="Enter your email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="pl-10 glass-card"
+                  className="pl-10 glass-card border-gray-300"
                   required
                 />
               </div>
@@ -85,7 +85,7 @@ const Login: React.FC = () => {
                   placeholder="Enter your password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="pl-10 glass-card"
+                  className="pl-10 glass-card border-gray-300"
                   required
                 />
               </div>
@@ -93,7 +93,7 @@ const Login: React.FC = () => {
 
             <Button 
               type="submit" 
-              className="w-full bg-primary/20 hover:bg-primary/30 border border-primary/50"
+              className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
               disabled={loading}
             >
               {loading ? 'Signing in...' : 'Sign In'}

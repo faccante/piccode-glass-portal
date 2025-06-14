@@ -1,8 +1,9 @@
 
 import React from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Package, LogOut, User, Settings, Loader } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Search, Github, Package } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
 interface LayoutProps {
@@ -10,9 +11,8 @@ interface LayoutProps {
 }
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
-  const location = useLocation();
   const navigate = useNavigate();
-  const { user, profile, logout, loading } = useAuth();
+  const { user, logout } = useAuth();
 
   const handleLogout = async () => {
     await logout();
@@ -20,74 +20,65 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   };
 
   return (
-    <div className="min-h-screen">
-      {/* Navigation */}
-      <nav className="glass-card m-4 rounded-2xl">
-        <div className="container mx-auto px-6 py-4">
+    <div className="min-h-screen bg-background">
+      {/* Fixed Maven-style header */}
+      <header className="maven-header">
+        <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             <Link to="/" className="flex items-center space-x-2">
-              <Package className="h-8 w-8 text-primary" />
-              <span className="text-2xl font-bold gradient-text">PiccodeScript Registry</span>
+              <Package className="h-6 w-6 text-primary" />
+              <span className="text-xl font-semibold text-foreground">PiccodeScript Registry</span>
             </Link>
 
-            <div className="flex items-center space-x-4">
-              {loading ? (
-                <Loader className="h-4 w-4 animate-spin text-muted-foreground" />
-              ) : user ? (
-                <>
-                  <span className="text-muted-foreground">
-                    Welcome, {profile?.full_name || user.email}
-                    {profile?.role === 'manager' && (
-                      <span className="ml-2 text-xs bg-primary/20 text-primary px-2 py-1 rounded">
-                        Manager
-                      </span>
-                    )}
-                  </span>
+            {/* Central search bar */}
+            <div className="maven-search">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search packages..."
+                  className="pl-10 h-10 glass-card border-gray-300"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-3">
+              <Button variant="ghost" size="sm" className="glass-button">
+                <Github className="h-4 w-4 mr-2" />
+                GitHub
+              </Button>
+              
+              {user ? (
+                <div className="flex items-center space-x-2">
                   <Link to="/dashboard">
                     <Button variant="ghost" size="sm" className="glass-button">
-                      <User className="h-4 w-4 mr-2" />
                       Dashboard
                     </Button>
                   </Link>
-                  <Link to="/account">
-                    <Button variant="ghost" size="sm" className="glass-button">
-                      <Settings className="h-4 w-4 mr-2" />
-                      Account
-                    </Button>
-                  </Link>
-                  {profile?.role === 'manager' && (
-                    <Link to="/manager-dashboard">
-                      <Button variant="ghost" size="sm" className="glass-button">
-                        Manager
-                      </Button>
-                    </Link>
-                  )}
                   <Button onClick={handleLogout} variant="ghost" size="sm" className="glass-button">
-                    <LogOut className="h-4 w-4 mr-2" />
                     Logout
                   </Button>
-                </>
+                </div>
               ) : (
-                <>
+                <div className="flex items-center space-x-2">
                   <Link to="/login">
                     <Button variant="ghost" size="sm" className="glass-button">
                       Login
                     </Button>
                   </Link>
                   <Link to="/signup">
-                    <Button size="sm" className="bg-primary/20 hover:bg-primary/30 border border-primary/50">
+                    <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90">
                       Sign Up
                     </Button>
                   </Link>
-                </>
+                </div>
               )}
             </div>
           </div>
         </div>
-      </nav>
+      </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 pb-8">
+      <main className="maven-container">
         {children}
       </main>
     </div>

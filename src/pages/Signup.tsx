@@ -6,12 +6,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { Package, Mail, Lock, CheckCircle } from 'lucide-react';
+import { Package, Mail, Lock, CheckCircle, User } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const Signup: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [signupComplete, setSignupComplete] = useState(false);
@@ -34,25 +35,19 @@ const Signup: React.FC = () => {
     setLoading(true);
 
     try {
-      const result = await signup(email, password);
+      const result = await signup(email, password, fullName);
       if (result.error) {
         toast({
           title: "Signup failed",
           description: result.error,
           variant: "destructive",
         });
-      } else if (result.needsConfirmation) {
+      } else {
         setSignupComplete(true);
         toast({
-          title: "Check your email",
-          description: "We've sent you a confirmation link. Please check your email to activate your account.",
+          title: "Account created",
+          description: "Please check your email to verify your account before signing in.",
         });
-      } else {
-        toast({
-          title: "Account created successfully",
-          description: "Welcome to PiccodeScript Registry!",
-        });
-        navigate('/dashboard');
       }
     } catch (error) {
       toast({
@@ -67,21 +62,26 @@ const Signup: React.FC = () => {
 
   if (signupComplete) {
     return (
-      <div className="min-h-[80vh] flex items-center justify-center">
+      <div className="min-h-[80vh] flex items-center justify-center py-8">
         <Card className="glass-card w-full max-w-md">
           <CardHeader className="text-center">
             <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
-            <CardTitle className="text-2xl gradient-text">Check Your Email</CardTitle>
+            <CardTitle className="text-2xl text-foreground">Check Your Email</CardTitle>
             <CardDescription>
-              We've sent a confirmation link to {email}
+              We've sent a verification link to {email}
             </CardDescription>
           </CardHeader>
           <CardContent className="text-center">
             <p className="text-sm text-muted-foreground mb-6">
-              Please check your email and click the confirmation link to activate your account.
-              You won't be able to log in until your email is confirmed.
+              Please check your email and click the verification link to activate your account.
+              Once verified, you can sign in to your account.
             </p>
             <div className="space-y-3">
+              <Link to="/login">
+                <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
+                  Go to Login
+                </Button>
+              </Link>
               <Button 
                 onClick={() => setSignupComplete(false)}
                 variant="ghost" 
@@ -89,17 +89,6 @@ const Signup: React.FC = () => {
               >
                 Back to Signup
               </Button>
-              <div className="text-center">
-                <p className="text-sm text-muted-foreground">
-                  Already confirmed?{' '}
-                  <Link 
-                    to="/login" 
-                    className="text-primary hover:text-primary/80 transition-colors"
-                  >
-                    Sign in
-                  </Link>
-                </p>
-              </div>
             </div>
           </CardContent>
         </Card>
@@ -108,17 +97,33 @@ const Signup: React.FC = () => {
   }
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center">
+    <div className="min-h-[80vh] flex items-center justify-center py-8">
       <Card className="glass-card w-full max-w-md">
         <CardHeader className="text-center">
           <Package className="h-12 w-12 text-primary mx-auto mb-4" />
-          <CardTitle className="text-2xl gradient-text">Create Account</CardTitle>
+          <CardTitle className="text-2xl text-foreground">Create Account</CardTitle>
           <CardDescription>
             Join the PiccodeScript Registry community
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="fullName">Full Name</Label>
+              <div className="relative">
+                <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="fullName"
+                  type="text"
+                  placeholder="Enter your full name"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  className="pl-10 glass-card border-gray-300"
+                  required
+                />
+              </div>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <div className="relative">
@@ -129,7 +134,7 @@ const Signup: React.FC = () => {
                   placeholder="Enter your email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="pl-10 glass-card"
+                  className="pl-10 glass-card border-gray-300"
                   required
                 />
               </div>
@@ -145,7 +150,7 @@ const Signup: React.FC = () => {
                   placeholder="Create a password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="pl-10 glass-card"
+                  className="pl-10 glass-card border-gray-300"
                   required
                 />
               </div>
@@ -161,7 +166,7 @@ const Signup: React.FC = () => {
                   placeholder="Confirm your password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="pl-10 glass-card"
+                  className="pl-10 glass-card border-gray-300"
                   required
                 />
               </div>
@@ -169,7 +174,7 @@ const Signup: React.FC = () => {
 
             <Button 
               type="submit" 
-              className="w-full bg-primary/20 hover:bg-primary/30 border border-primary/50"
+              className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
               disabled={loading}
             >
               {loading ? 'Creating Account...' : 'Create Account'}
