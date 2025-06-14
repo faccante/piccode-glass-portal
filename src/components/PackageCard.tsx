@@ -1,23 +1,26 @@
-
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Download, Github, Calendar, User, Package } from 'lucide-react';
+import { Download, Github, Calendar, User, Package, Trash2 } from 'lucide-react';
 import { PackageNamespace } from '@/hooks/usePackages';
 
 interface PackageCardProps {
   package: PackageNamespace;
   onPackageClick?: (packageId: string) => void;
   onStatusChange?: (packageId: string, status: PackageNamespace['status']) => void;
+  onDeletePackage?: (packageId: string) => Promise<void>;
   isManager?: boolean;
+  showActions?: boolean;
 }
 
 const PackageCard: React.FC<PackageCardProps> = ({ 
   package: pkg, 
   onPackageClick, 
   onStatusChange, 
-  isManager = false 
+  onDeletePackage,
+  isManager = false,
+  showActions = false
 }) => {
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -46,6 +49,17 @@ const PackageCard: React.FC<PackageCardProps> = ({
   const openGithubRepo = (e: React.MouseEvent) => {
     e.stopPropagation();
     window.open(pkg.github_repo, '_blank');
+  };
+
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onDeletePackage && window.confirm('Are you sure you want to delete this package? This action cannot be undone.')) {
+      try {
+        await onDeletePackage(pkg.id);
+      } catch (error) {
+        console.error('Error deleting package:', error);
+      }
+    }
   };
 
   return (
@@ -126,6 +140,16 @@ const PackageCard: React.FC<PackageCardProps> = ({
                 Reject
               </Button>
             </>
+          )}
+
+          {showActions && onDeletePackage && (
+            <Button
+              onClick={handleDelete}
+              variant="ghost"
+              className="glass-button text-red-400 hover:text-red-300"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
           )}
         </div>
       </CardContent>
