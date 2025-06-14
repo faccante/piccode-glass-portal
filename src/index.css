@@ -125,6 +125,11 @@
       @apply h-5 w-5 mb-1;
     }
 
+    /* Hide desktop navigation on mobile */
+    .desktop-nav-actions {
+      @apply hidden;
+    }
+
     /* Mobile-friendly card spacing */
     .glass-card {
       @apply mx-1;
