@@ -1,9 +1,13 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Package, BarChart3, Download, Users } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Package, BarChart3, Download, Users, Plus } from 'lucide-react';
+import PackageUploadForm from '@/components/PackageUploadForm';
 
 const Dashboard: React.FC = () => {
+  const [showUploadForm, setShowUploadForm] = useState(false);
+
   return (
     <div className="space-y-8 py-8">
       <div className="flex items-center justify-between">
@@ -11,6 +15,13 @@ const Dashboard: React.FC = () => {
           <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
           <p className="text-muted-foreground">Manage your packages and view analytics</p>
         </div>
+        <Button
+          onClick={() => setShowUploadForm(true)}
+          className="bg-primary text-primary-foreground hover:bg-primary/90"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Upload Package
+        </Button>
       </div>
 
       {/* Stats Overview - Empty state */}
@@ -97,6 +108,11 @@ const Dashboard: React.FC = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Upload Form Modal */}
+      {showUploadForm && (
+        <PackageUploadForm onClose={() => setShowUploadForm(false)} />
+      )}
     </div>
   );
 };
