@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Search, Github, Package, User } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import Avatar from './Avatar';
+import ThemeToggle from './ThemeToggle';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -48,6 +49,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             </div>
 
             <div className="flex items-center space-x-3">
+              <ThemeToggle />
               <Button variant="ghost" size="sm" className="glass-button">
                 <Github className="h-4 w-4 mr-2" />
                 GitHub
