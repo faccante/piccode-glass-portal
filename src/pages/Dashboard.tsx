@@ -19,12 +19,20 @@ const Dashboard: React.FC = () => {
   const [showVersionManagement, setShowVersionManagement] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<any>(null);
-  const { packages, loading, deletePackage } = usePackages();
+  const { packages, loading, deletePackage, fetchPackages } = usePackages();
   const { user } = useAuth();
   const { toast } = useToast();
 
+  console.log('Dashboard - All packages:', packages);
+  console.log('Dashboard - Current user ID:', user?.id);
+
   // Filter packages to show only user's packages
-  const userPackages = packages.filter(pkg => pkg.author_id === user?.id);
+  const userPackages = packages.filter(pkg => {
+    console.log('Checking package:', pkg.name, 'author_id:', pkg.author_id, 'user_id:', user?.id);
+    return pkg.author_id === user?.id;
+  });
+
+  console.log('Dashboard - User packages:', userPackages);
 
   const handleAddVersion = (packageData: any) => {
     setSelectedPackage(packageData);
@@ -60,6 +68,12 @@ const Dashboard: React.FC = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const handleCreateFormClose = () => {
+    setShowCreateForm(false);
+    // Refresh packages after creation
+    fetchPackages();
   };
 
   const totalDownloads = userPackages.reduce((sum, pkg) => sum + pkg.total_downloads, 0);
@@ -169,6 +183,13 @@ const Dashboard: React.FC = () => {
                 <Package className="h-12 w-12 text-gray-400 mx-auto mb-2" />
                 <p className="text-gray-500">Your package namespaces will appear here</p>
                 <p className="text-sm text-gray-400">Create your first package to get started</p>
+                <Button 
+                  onClick={fetchPackages} 
+                  variant="outline" 
+                  className="mt-4"
+                >
+                  Refresh
+                </Button>
               </div>
             </div>
           ) : (
@@ -266,7 +287,7 @@ const Dashboard: React.FC = () => {
 
       {/* Create Package Form Modal */}
       {showCreateForm && (
-        <PackageCreateForm onClose={() => setShowCreateForm(false)} />
+        <PackageCreateForm onClose={handleCreateFormClose} />
       )}
 
       {/* Version Upload Form Modal */}
