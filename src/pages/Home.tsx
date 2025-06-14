@@ -1,14 +1,25 @@
 
 import React, { useState } from 'react';
-import { Search, Package } from 'lucide-react';
+import { Search, Package, ExternalLink, Calendar, User } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
+import { usePackages } from '@/hooks/usePackages';
+import { useNavigate } from 'react-router-dom';
 
 const Home = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const { packages, loading } = usePackages();
+  const navigate = useNavigate();
 
-  // Empty packages array for now
-  const packages: any[] = [];
+  // Filter packages based on search term
+  const filteredPackages = packages.filter(pkg =>
+    pkg.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    pkg.description.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const handlePackageClick = (packageId: string) => {
+    navigate(`/package/${packageId}`);
+  };
 
   return (
     <div className="space-y-8 py-8">
@@ -39,11 +50,15 @@ const Home = () => {
       <section className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-semibold text-foreground">
-            {searchTerm ? `Search Results (${packages.length})` : 'Available Packages'}
+            {searchTerm ? `Search Results (${filteredPackages.length})` : 'Available Packages'}
           </h2>
         </div>
 
-        {packages.length === 0 ? (
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        ) : filteredPackages.length === 0 ? (
           <Card className="glass-card">
             <CardContent className="py-12 text-center">
               <Package className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
@@ -57,8 +72,48 @@ const Home = () => {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-4">
-            {/* Package list will go here when packages exist */}
+          <div className="space-y-4">
+            {filteredPackages.map((pkg) => (
+              <div
+                key={pkg.id}
+                onClick={() => handlePackageClick(pkg.id)}
+                className="p-6 rounded-lg border border-border bg-card hover:bg-accent/50 cursor-pointer transition-colors group"
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <h3 className="text-xl font-semibold text-foreground group-hover:text-primary transition-colors">
+                        {pkg.name}
+                      </h3>
+                      <span className="text-sm text-muted-foreground">
+                        v{pkg.latest_version || '1.0.0'}
+                      </span>
+                      <ExternalLink className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                    <p className="text-muted-foreground mb-3 line-clamp-2">
+                      {pkg.description}
+                    </p>
+                    <div className="flex items-center gap-6 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <User className="h-4 w-4" />
+                        <span>{pkg.profiles?.full_name || pkg.author_email}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Calendar className="h-4 w-4" />
+                        <span>{new Date(pkg.created_at).toLocaleDateString()}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Package className="h-4 w-4" />
+                        <span>{pkg.total_downloads} downloads</span>
+                      </div>
+                      <div className="px-2 py-1 bg-muted rounded text-xs">
+                        {pkg.license}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </section>
