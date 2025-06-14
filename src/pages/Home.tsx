@@ -12,7 +12,7 @@ const Home = () => {
   const { packages, loading } = usePackages();
   const navigate = useNavigate();
 
-  // Filter packages to only show approved ones, then filter by search term
+  // Show all approved packages from any user, then filter by search term
   const approvedPackages = packages.filter(pkg => pkg.status === 'approved');
   const filteredPackages = approvedPackages.filter(pkg =>
     pkg.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
