@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,6 +14,14 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const { user, profile } = useAuth();
+  const [headerSearchTerm, setHeaderSearchTerm] = useState('');
+
+  const handleHeaderSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (headerSearchTerm.trim()) {
+      navigate(`/?search=${encodeURIComponent(headerSearchTerm.trim())}`);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -28,13 +36,15 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
             {/* Central search bar */}
             <div className="maven-search">
-              <div className="relative">
+              <form onSubmit={handleHeaderSearch} className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search packages..."
                   className="pl-10 h-10 glass-card border-gray-300"
+                  value={headerSearchTerm}
+                  onChange={(e) => setHeaderSearchTerm(e.target.value)}
                 />
-              </div>
+              </form>
             </div>
 
             <div className="flex items-center space-x-3">
