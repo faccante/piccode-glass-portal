@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { usePackages } from '@/hooks/usePackages';
 import { useNavigate } from 'react-router-dom';
+import Avatar from '@/components/Avatar';
 
 const Home = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -94,8 +95,12 @@ const Home = () => {
                       {pkg.description}
                     </p>
                     <div className="flex items-center gap-6 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <User className="h-4 w-4" />
+                      <div className="flex items-center gap-2">
+                        <Avatar 
+                          src={pkg.profiles?.avatar_url} 
+                          username={pkg.profiles?.full_name || pkg.author_email} 
+                          size="sm" 
+                        />
                         <span>{pkg.profiles?.full_name || pkg.author_email}</span>
                       </div>
                       <div className="flex items-center gap-1">

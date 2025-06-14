@@ -8,6 +8,7 @@ import { ArrowLeft, Download, Github, User, Calendar, Package } from 'lucide-rea
 import { usePackages, PackageNamespace } from '@/hooks/usePackages';
 import { useToast } from '@/hooks/use-toast';
 import PackageInstallChart from '@/components/PackageInstallChart';
+import Avatar from '@/components/Avatar';
 
 const PackageDetail = () => {
   const { packageId } = useParams<{ packageId: string }>();
@@ -184,8 +185,12 @@ const PackageDetail = () => {
             <CardContent className="space-y-4">
               <div>
                 <div className="text-sm font-medium text-muted-foreground">Author</div>
-                <div className="flex items-center gap-2 mt-1">
-                  <User className="h-4 w-4" />
+                <div className="flex items-center gap-3 mt-1">
+                  <Avatar 
+                    src={packageData.profiles?.avatar_url} 
+                    username={packageData.profiles?.full_name || packageData.author_email} 
+                    size="sm" 
+                  />
                   <span>{packageData.profiles?.full_name || packageData.author_email}</span>
                 </div>
               </div>

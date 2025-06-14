@@ -144,6 +144,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          avatar_url: string | null
           bio: string | null
           created_at: string
           email: string
@@ -154,6 +155,7 @@ export type Database = {
           website: string | null
         }
         Insert: {
+          avatar_url?: string | null
           bio?: string | null
           created_at?: string
           email: string
@@ -164,6 +166,7 @@ export type Database = {
           website?: string | null
         }
         Update: {
+          avatar_url?: string | null
           bio?: string | null
           created_at?: string
           email?: string
@@ -180,7 +183,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      generate_avatar_pattern: {
+        Args: { username: string }
+        Returns: string
+      }
     }
     Enums: {
       application_status: "pending" | "reviewed" | "accepted" | "rejected"

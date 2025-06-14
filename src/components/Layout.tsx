@@ -3,8 +3,9 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, Github, Package } from 'lucide-react';
+import { Search, Github, Package, User } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import Avatar from './Avatar';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -12,12 +13,7 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
-
-  const handleLogout = async () => {
-    await logout();
-    navigate('/');
-  };
+  const { user, profile } = useAuth();
 
   return (
     <div className="min-h-screen bg-background">
@@ -54,9 +50,16 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                       Dashboard
                     </Button>
                   </Link>
-                  <Button onClick={handleLogout} variant="ghost" size="sm" className="glass-button">
-                    Logout
-                  </Button>
+                  <Link to="/account">
+                    <Button variant="ghost" size="sm" className="glass-button flex items-center gap-2">
+                      <Avatar 
+                        src={profile?.avatar_url} 
+                        username={profile?.full_name || profile?.email || 'User'} 
+                        size="sm" 
+                      />
+                      Profile
+                    </Button>
+                  </Link>
                 </div>
               ) : (
                 <div className="flex items-center space-x-2">

@@ -6,13 +6,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/hooks/useAuth';
-import { User, Mail, Globe, Save } from 'lucide-react';
+import { User, Mail, Globe, Save, LogOut } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
+import ProfileImageUpload from '@/components/ProfileImageUpload';
 
 const Account: React.FC = () => {
-  const { user, profile, updateProfile } = useAuth();
+  const { user, profile, updateProfile, logout } = useAuth();
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
   
   const [formData, setFormData] = useState({
     full_name: profile?.full_name || '',
@@ -51,12 +54,20 @@ const Account: React.FC = () => {
     }
   };
 
+  const handleLogout = async () => {
+    await logout();
+    navigate('/');
+  };
+
   return (
     <div className="max-w-2xl mx-auto space-y-8">
       <div>
         <h1 className="text-3xl font-bold gradient-text">Account Settings</h1>
         <p className="text-muted-foreground">Manage your account information and preferences</p>
       </div>
+
+      {/* Profile Picture Section */}
+      <ProfileImageUpload />
 
       <Card className="glass-card">
         <CardHeader>
@@ -79,6 +90,9 @@ const Account: React.FC = () => {
                 onChange={(e) => setFormData(prev => ({ ...prev, full_name: e.target.value }))}
                 className="glass-card"
               />
+              <p className="text-xs text-muted-foreground">
+                Changes to your display name will update your avatar pattern if you don't have a custom picture.
+              </p>
             </div>
 
             <div className="space-y-2">
@@ -134,6 +148,26 @@ const Account: React.FC = () => {
               {loading ? 'Saving...' : 'Save Changes'}
             </Button>
           </form>
+        </CardContent>
+      </Card>
+
+      {/* Account Actions */}
+      <Card className="glass-card">
+        <CardHeader>
+          <CardTitle>Account Actions</CardTitle>
+          <CardDescription>
+            Manage your account session and data
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Button
+            onClick={handleLogout}
+            variant="outline"
+            className="w-full glass-button"
+          >
+            <LogOut className="h-4 w-4 mr-2" />
+            Sign Out
+          </Button>
         </CardContent>
       </Card>
 
