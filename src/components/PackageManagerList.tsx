@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -21,6 +20,7 @@ import {
   ChevronRight,
   Eye
 } from 'lucide-react';
+import PackageDetailsModal from '@/components/PackageDetailsModal';
 
 const PackageManagerList: React.FC = () => {
   const [packages, setPackages] = useState<ManagerPackage[]>([]);
@@ -366,6 +366,16 @@ const PackageManagerList: React.FC = () => {
           </Button>
         </div>
       )}
+
+      {/* Package Details Modal */}
+      <PackageDetailsModal
+        package={selectedPackage}
+        isOpen={showDetails}
+        onClose={() => setShowDetails(false)}
+        onApprove={handleApprove}
+        onReject={handleReject}
+        isUpdatingStatus={isUpdatingStatus}
+      />
     </div>
   );
 };
