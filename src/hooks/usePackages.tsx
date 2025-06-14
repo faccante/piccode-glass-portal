@@ -151,21 +151,39 @@ export const usePackages = () => {
 
     if (analyticsError) throw analyticsError;
 
+    // Get current download count and increment it
+    const { data: currentVersion, error: getCurrentError } = await supabase
+      .from('package_versions')
+      .select('downloads')
+      .eq('id', versionId)
+      .single();
+
+    if (getCurrentError) throw getCurrentError;
+
     // Update the version's download count
     const { error: versionUpdateError } = await supabase
       .from('package_versions')
       .update({ 
-        downloads: supabase.sql`downloads + 1`
+        downloads: (currentVersion.downloads || 0) + 1
       })
       .eq('id', versionId);
 
     if (versionUpdateError) throw versionUpdateError;
 
+    // Get current namespace download count and increment it
+    const { data: currentNamespace, error: getCurrentNamespaceError } = await supabase
+      .from('package_namespaces')
+      .select('total_downloads')
+      .eq('id', versionData.package_namespace_id)
+      .single();
+
+    if (getCurrentNamespaceError) throw getCurrentNamespaceError;
+
     // Update the package namespace's total downloads count
     const { error: namespaceUpdateError } = await supabase
       .from('package_namespaces')
       .update({ 
-        total_downloads: supabase.sql`total_downloads + 1`
+        total_downloads: (currentNamespace.total_downloads || 0) + 1
       })
       .eq('id', versionData.package_namespace_id);
 
