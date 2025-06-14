@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,10 +12,11 @@ import { usePackages } from '@/hooks/usePackages';
 import { supabase } from '@/integrations/supabase/client';
 
 interface UploadPackageProps {
-  onClose: () => void;
+  onClose?: () => void;
 }
 
 const UploadPackage: React.FC<UploadPackageProps> = ({ onClose }) => {
+  const [isOpen, setIsOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -31,6 +31,11 @@ const UploadPackage: React.FC<UploadPackageProps> = ({ onClose }) => {
   const { user } = useAuth();
   const { submitPackage } = usePackages();
   const { toast } = useToast();
+
+  const handleClose = () => {
+    setIsOpen(false);
+    onClose?.();
+  };
 
   // Check for existing package when name changes
   useEffect(() => {
@@ -149,7 +154,7 @@ const UploadPackage: React.FC<UploadPackageProps> = ({ onClose }) => {
         description: "Your package is now pending review by our team.",
       });
       
-      onClose();
+      handleClose();
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       toast({
@@ -174,7 +179,13 @@ const UploadPackage: React.FC<UploadPackageProps> = ({ onClose }) => {
   ];
 
   return (
-    <Dialog open={true} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <Button className="bg-primary/20 hover:bg-primary/30 border border-primary/50">
+          <Upload className="h-4 w-4 mr-2" />
+          Upload Package
+        </Button>
+      </DialogTrigger>
       <DialogContent className="glass-card max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl gradient-text">Upload New Package</DialogTitle>
@@ -356,7 +367,7 @@ const UploadPackage: React.FC<UploadPackageProps> = ({ onClose }) => {
             <Button
               type="button"
               variant="ghost"
-              onClick={onClose}
+              onClick={handleClose}
               className="glass-button flex-1"
             >
               Cancel
