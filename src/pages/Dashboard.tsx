@@ -7,19 +7,25 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import PackageCreateForm from '@/components/PackageCreateForm';
 import VersionUploadForm from '@/components/VersionUploadForm';
+import { usePackages } from '@/hooks/usePackages';
+import { useAuth } from '@/hooks/useAuth';
 
 const Dashboard: React.FC = () => {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showVersionForm, setShowVersionForm] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<any>(null);
+  const { packages, loading } = usePackages();
+  const { user } = useAuth();
 
-  // Mock packages data - empty for now
-  const packages: any[] = [];
+  // Filter packages to show only user's packages
+  const userPackages = packages.filter(pkg => pkg.author_id === user?.id);
 
   const handleAddVersion = (packageData: any) => {
     setSelectedPackage(packageData);
     setShowVersionForm(true);
   };
+
+  const totalDownloads = userPackages.reduce((sum, pkg) => sum + pkg.total_downloads, 0);
 
   return (
     <div className="space-y-8 py-8">
@@ -37,7 +43,7 @@ const Dashboard: React.FC = () => {
         </Button>
       </div>
 
-      {/* Stats Overview - Empty state */}
+      {/* Stats Overview */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card className="bg-white/70 backdrop-blur-sm border border-gray-200">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -45,8 +51,10 @@ const Dashboard: React.FC = () => {
             <Package className="h-4 w-4 text-gray-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">0</div>
-            <p className="text-xs text-gray-500">No packages created</p>
+            <div className="text-2xl font-bold text-gray-900">{userPackages.length}</div>
+            <p className="text-xs text-gray-500">
+              {userPackages.length === 0 ? 'No packages created' : 'Your published packages'}
+            </p>
           </CardContent>
         </Card>
 
@@ -56,8 +64,10 @@ const Dashboard: React.FC = () => {
             <Download className="h-4 w-4 text-gray-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">0</div>
-            <p className="text-xs text-gray-500">No downloads yet</p>
+            <div className="text-2xl font-bold text-gray-900">{totalDownloads}</div>
+            <p className="text-xs text-gray-500">
+              {totalDownloads === 0 ? 'No downloads yet' : 'Across all packages'}
+            </p>
           </CardContent>
         </Card>
 
@@ -84,7 +94,7 @@ const Dashboard: React.FC = () => {
         </Card>
       </div>
 
-      {/* Empty Analytics Chart */}
+      {/* Analytics Chart */}
       <Card className="bg-white/70 backdrop-blur-sm border border-gray-200">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-gray-900">
@@ -112,7 +122,11 @@ const Dashboard: React.FC = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {packages.length === 0 ? (
+          {loading ? (
+            <div className="h-40 flex items-center justify-center">
+              <p className="text-gray-500">Loading packages...</p>
+            </div>
+          ) : userPackages.length === 0 ? (
             <div className="h-40 flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg">
               <div className="text-center">
                 <Package className="h-12 w-12 text-gray-400 mx-auto mb-2" />
@@ -128,12 +142,13 @@ const Dashboard: React.FC = () => {
                   <TableHead>Latest Version</TableHead>
                   <TableHead>License</TableHead>
                   <TableHead>Downloads</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead>Updated</TableHead>
                   <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {packages.map((pkg) => (
+                {userPackages.map((pkg) => (
                   <TableRow key={pkg.id}>
                     <TableCell className="font-medium">
                       <div>
@@ -141,10 +156,20 @@ const Dashboard: React.FC = () => {
                         <div className="text-sm text-gray-500">{pkg.description}</div>
                       </div>
                     </TableCell>
-                    <TableCell>{pkg.latestVersion || 'No versions'}</TableCell>
+                    <TableCell>{pkg.latest_version || 'No versions'}</TableCell>
                     <TableCell>{pkg.license}</TableCell>
-                    <TableCell>{pkg.downloads || 0}</TableCell>
-                    <TableCell>{new Date(pkg.updatedAt).toLocaleDateString()}</TableCell>
+                    <TableCell>{pkg.total_downloads}</TableCell>
+                    <TableCell>
+                      <span className={`px-2 py-1 text-xs rounded-full ${
+                        pkg.status === 'approved' ? 'bg-green-100 text-green-800' :
+                        pkg.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                        pkg.status === 'reviewing' ? 'bg-blue-100 text-blue-800' :
+                        'bg-red-100 text-red-800'
+                      }`}>
+                        {pkg.status}
+                      </span>
+                    </TableCell>
+                    <TableCell>{new Date(pkg.updated_at).toLocaleDateString()}</TableCell>
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>

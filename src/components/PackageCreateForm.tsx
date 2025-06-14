@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Github, Package } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { usePackages } from '@/hooks/usePackages';
 
 interface PackageCreateFormProps {
   onClose: () => void;
@@ -25,6 +26,7 @@ const PackageCreateForm: React.FC<PackageCreateFormProps> = ({ onClose }) => {
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
+  const { submitPackage } = usePackages();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,11 +40,29 @@ const PackageCreateForm: React.FC<PackageCreateFormProps> = ({ onClose }) => {
       return;
     }
 
+    if (!formData.name || !formData.description || !formData.license || !formData.githubRepo) {
+      toast({
+        title: "Missing required fields",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
-      // TODO: Implement package creation logic
-      console.log('Creating package:', formData);
+      // Create a minimal package entry without JAR file and version
+      const packageData = {
+        name: formData.name,
+        description: formData.description,
+        version: '0.0.0', // Placeholder version for namespace creation
+        license: formData.license,
+        githubRepo: formData.githubRepo,
+        jarFile: new File([], 'placeholder.jar') // Placeholder file
+      };
+
+      await submitPackage(packageData);
       
       toast({
         title: "Package created successfully",

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -130,13 +129,11 @@ export const usePackages = () => {
     }
   };
 
-  const submitPackage = async (packageData: {
+  const createPackageNamespace = async (packageData: {
     name: string;
     description: string;
-    version: string;
     license: string;
     githubRepo: string;
-    jarFile: File;
   }) => {
     if (!user || !profile) {
       throw new Error('Not authenticated');
@@ -150,64 +147,51 @@ export const usePackages = () => {
         .eq('name', packageData.name)
         .single();
 
-      let namespaceId: string;
-
       if (existingPackage) {
-        // Package exists, check if user is the author
-        if (existingPackage.author_id !== user.id) {
-          throw new Error('Package name already exists and belongs to another user');
-        }
-        namespaceId = existingPackage.id;
-
-        // Check if version already exists
-        const { data: existingVersion } = await supabase
-          .from('package_versions')
-          .select('id')
-          .eq('package_namespace_id', namespaceId)
-          .eq('version', packageData.version)
-          .single();
-
-        if (existingVersion) {
-          throw new Error('This version already exists for this package');
-        }
-      } else {
-        // Create new package namespace
-        const { data: newPackage, error: namespaceError } = await supabase
-          .from('package_namespaces')
-          .insert({
-            name: packageData.name,
-            description: packageData.description,
-            license: packageData.license,
-            github_repo: packageData.githubRepo,
-            author_id: user.id,
-            author_email: user.email || ''
-          })
-          .select()
-          .single();
-
-        if (namespaceError) throw namespaceError;
-        namespaceId = newPackage.id;
+        throw new Error('Package name already exists');
       }
 
-      // Add new version
-      const { error: versionError } = await supabase
-        .from('package_versions')
+      // Create new package namespace
+      const { data: newPackage, error: namespaceError } = await supabase
+        .from('package_namespaces')
         .insert({
-          package_namespace_id: namespaceId,
-          version: packageData.version,
-          jar_file_size: packageData.jarFile.size
-        });
+          name: packageData.name,
+          description: packageData.description,
+          license: packageData.license,
+          github_repo: packageData.githubRepo,
+          author_id: user.id,
+          author_email: user.email || ''
+        })
+        .select()
+        .single();
 
-      if (versionError) throw versionError;
+      if (namespaceError) throw namespaceError;
 
       // Refresh packages list
       await fetchPackages();
       
-      return { success: true };
+      return { success: true, packageId: newPackage.id };
     } catch (error) {
-      console.error('Error submitting package:', error);
+      console.error('Error creating package namespace:', error);
       throw error;
     }
+  };
+
+  const submitPackage = async (packageData: {
+    name: string;
+    description: string;
+    version: string;
+    license: string;
+    githubRepo: string;
+    jarFile: File;
+  }) => {
+    // For now, just create the namespace - we'll handle versions separately
+    return await createPackageNamespace({
+      name: packageData.name,
+      description: packageData.description,
+      license: packageData.license,
+      githubRepo: packageData.githubRepo
+    });
   };
 
   const updatePackage = async (packageId: string, updateData: {
@@ -355,6 +339,7 @@ export const usePackages = () => {
     fetchPackages,
     getPackageDetails,
     submitPackage,
+    createPackageNamespace,
     updatePackage,
     updatePackageStatus,
     recordDownload,
