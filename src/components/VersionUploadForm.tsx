@@ -9,6 +9,7 @@ import { Progress } from '@/components/ui/progress';
 import { Upload, File, GitBranch } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { usePackages } from '@/hooks/usePackages';
 import { supabase } from '@/integrations/supabase/client';
 
 interface VersionUploadFormProps {
@@ -26,6 +27,7 @@ const VersionUploadForm: React.FC<VersionUploadFormProps> = ({ package: pkg, onC
   const [loading, setLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const { user } = useAuth();
+  const { uploadJarFile } = usePackages();
   const { toast } = useToast();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -39,24 +41,6 @@ const VersionUploadForm: React.FC<VersionUploadFormProps> = ({ package: pkg, onC
         variant: "destructive",
       });
     }
-  };
-
-  const simulateFileUpload = async (file: File): Promise<string> => {
-    return new Promise((resolve) => {
-      let progress = 0;
-      const interval = setInterval(() => {
-        progress += Math.random() * 15;
-        if (progress >= 100) {
-          progress = 100;
-          clearInterval(interval);
-          setUploadProgress(100);
-          // Simulate a file URL - in production this would be actual file storage
-          resolve(`uploads/${pkg.name}/${formData.version}/${file.name}`);
-        } else {
-          setUploadProgress(Math.round(progress));
-        }
-      }, 100);
-    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -119,19 +103,24 @@ const VersionUploadForm: React.FC<VersionUploadFormProps> = ({ package: pkg, onC
         throw new Error('Version already exists');
       }
 
-      console.log('Starting file upload simulation...');
+      console.log('Starting file upload...');
       
-      // Simulate file upload with progress
-      const fileUrl = await simulateFileUpload(formData.jarFile);
+      // Set progress to indicate upload start
+      setUploadProgress(25);
       
-      console.log('File upload completed, URL:', fileUrl);
+      // Upload the JAR file to storage
+      const jarFileUrl = await uploadJarFile(formData.jarFile, pkg.name, formData.version.trim());
+      
+      console.log('File upload completed, URL:', jarFileUrl);
+      setUploadProgress(75);
+      
       console.log('About to insert version into database...');
 
       // Prepare the data to insert
       const versionData = {
         package_namespace_id: pkg.id,
         version: formData.version.trim(),
-        jar_file_url: fileUrl,
+        jar_file_url: jarFileUrl,
         jar_file_size: formData.jarFile.size,
         downloads: 0
       };
@@ -156,6 +145,7 @@ const VersionUploadForm: React.FC<VersionUploadFormProps> = ({ package: pkg, onC
         throw new Error('Version was not created - no data returned');
       }
 
+      setUploadProgress(100);
       console.log('Version successfully created:', newVersion);
 
       toast({

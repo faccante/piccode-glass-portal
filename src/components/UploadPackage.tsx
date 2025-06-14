@@ -29,7 +29,7 @@ const UploadPackage: React.FC<UploadPackageProps> = ({ onClose }) => {
   const [isExistingPackage, setIsExistingPackage] = useState(false);
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
-  const { submitPackage } = usePackages();
+  const { submitPackage, uploadJarFile } = usePackages();
   const { toast } = useToast();
 
   // Check for existing package when name changes

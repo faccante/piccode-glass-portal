@@ -130,6 +130,35 @@ export const usePackages = () => {
     return data as PackageNamespace;
   };
 
+  const uploadJarFile = async (file: File, packageName: string, version: string): Promise<string> => {
+    const fileName = `${packageName}-${version}.jar`;
+    const filePath = `${packageName}/${version}/${fileName}`;
+
+    console.log('Uploading file to storage:', filePath);
+
+    const { data, error } = await supabase.storage
+      .from('jar-files')
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: false
+      });
+
+    if (error) {
+      console.error('Error uploading file:', error);
+      throw error;
+    }
+
+    console.log('File uploaded successfully:', data);
+
+    // Get the public URL for the uploaded file
+    const { data: publicUrlData } = supabase.storage
+      .from('jar-files')
+      .getPublicUrl(filePath);
+
+    console.log('Public URL:', publicUrlData.publicUrl);
+    return publicUrlData.publicUrl;
+  };
+
   const recordDownload = async (versionId: string) => {
     // First, get the package namespace ID from the version
     const { data: versionData, error: versionError } = await supabase
@@ -232,13 +261,16 @@ export const usePackages = () => {
 
       console.log('Created namespace:', namespaceData);
 
+      // Upload the JAR file to storage
+      const jarFileUrl = await uploadJarFile(packageData.jarFile, packageData.name, packageData.version);
+
       // Create the first version
       const { data: versionData, error: versionError } = await supabase
         .from('package_versions')
         .insert({
           package_namespace_id: namespaceData.id,
           version: packageData.version,
-          jar_file_url: `uploads/${packageData.name}/${packageData.version}/${packageData.jarFile.name}`,
+          jar_file_url: jarFileUrl,
           jar_file_size: packageData.jarFile.size,
           downloads: 0
         })
@@ -301,5 +333,6 @@ export const usePackages = () => {
     submitPackage,
     deletePackage,
     fetchPackages,
+    uploadJarFile,
   };
 };
