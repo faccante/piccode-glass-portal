@@ -3,7 +3,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Enhanced light mode and Gruvbox dark mode design system */
+/* Enhanced light mode and Gruvbox light dark mode design system */
 
 @layer base {
   :root {
@@ -44,38 +44,38 @@
   }
 
   .dark {
-    /* Gruvbox dark theme colors */
-    --background: 24 13% 8%;      /* #1d2021 gruvbox dark0 */
-    --foreground: 43 14% 83%;     /* #ebdbb2 gruvbox light1 */
+    /* Gruvbox light theme colors */
+    --background: 43 14% 94%;     /* #fbf1c7 gruvbox light0 */
+    --foreground: 24 13% 20%;     /* #3c3836 gruvbox dark2 */
 
-    --card: 24 13% 10%;           /* #282828 gruvbox dark0_hard */
-    --card-foreground: 43 14% 83%;
+    --card: 43 14% 96%;           /* #fbf1c7 gruvbox light0_hard */
+    --card-foreground: 24 13% 20%;
 
-    --popover: 24 13% 10%;
-    --popover-foreground: 43 14% 83%;
+    --popover: 43 14% 96%;
+    --popover-foreground: 24 13% 20%;
 
     --primary: 45 85% 58%;        /* #fabd2f gruvbox yellow */
-    --primary-foreground: 24 13% 8%;
+    --primary-foreground: 24 13% 20%;
 
-    --secondary: 32 10% 20%;      /* #3c3836 gruvbox dark2 */
-    --secondary-foreground: 43 14% 83%;
+    --secondary: 41 24% 88%;      /* #f2e5bc gruvbox light1 */
+    --secondary-foreground: 24 13% 20%;
 
-    --muted: 32 10% 20%;
-    --muted-foreground: 40 15% 52%; /* #a89984 gruvbox light4 */
+    --muted: 41 24% 88%;
+    --muted-foreground: 32 10% 37%; /* #665c54 gruvbox dark4 */
 
-    --accent: 142 25% 50%;        /* #689d6a gruvbox aqua */
-    --accent-foreground: 43 14% 83%;
+    --accent: 104 23% 68%;        /* #b8bb26 gruvbox green */
+    --accent-foreground: 24 13% 20%;
 
-    --destructive: 4 89% 58%;     /* #fb4934 gruvbox red */
-    --destructive-foreground: 43 14% 83%;
+    --destructive: 0 89% 58%;     /* #fb4934 gruvbox red */
+    --destructive-foreground: 43 14% 94%;
 
-    --border: 32 10% 20%;         /* #3c3836 gruvbox dark2 */
-    --input: 32 10% 20%;
+    --border: 41 24% 88%;         /* #f2e5bc gruvbox light1 */
+    --input: 41 24% 88%;
     --ring: 45 85% 58%;           /* #fabd2f gruvbox yellow */
 
-    --glass-bg: rgba(40, 40, 40, 0.90);
-    --glass-border: rgba(235, 219, 178, 0.15);
-    --glass-shadow: rgba(0, 0, 0, 0.4);
+    --glass-bg: rgba(251, 241, 199, 0.90);
+    --glass-border: rgba(60, 56, 54, 0.15);
+    --glass-shadow: rgba(0, 0, 0, 0.1);
   }
 }
 
@@ -94,10 +94,10 @@
   }
 
   .dark body {
-    /* Gruvbox dark gradient */
+    /* Gruvbox light gradient */
     background: linear-gradient(135deg, 
-      hsl(24, 13%, 8%) 0%, 
-      hsl(32, 10%, 12%) 100%);
+      hsl(43, 14%, 96%) 0%, 
+      hsl(41, 24%, 92%) 100%);
   }
 }
 
