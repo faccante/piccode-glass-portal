@@ -3,7 +3,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Enhanced light mode and Gruvbox light dark mode design system */
+/* Enhanced light mode and Tokyo Night dark mode design system */
 
 @layer base {
   :root {
@@ -44,38 +44,38 @@
   }
 
   .dark {
-    /* Gruvbox light theme colors */
-    --background: 43 14% 94%;     /* #fbf1c7 gruvbox light0 */
-    --foreground: 24 13% 20%;     /* #3c3836 gruvbox dark2 */
+    /* Tokyo Night theme colors */
+    --background: 220 13% 9%;      /* #1a1b26 tokyo night background */
+    --foreground: 230 23% 89%;     /* #c0caf5 tokyo night foreground */
 
-    --card: 43 14% 96%;           /* #fbf1c7 gruvbox light0_hard */
-    --card-foreground: 24 13% 20%;
+    --card: 220 13% 11%;           /* #24283b tokyo night bg_dark */
+    --card-foreground: 230 23% 89%;
 
-    --popover: 43 14% 96%;
-    --popover-foreground: 24 13% 20%;
+    --popover: 220 13% 11%;
+    --popover-foreground: 230 23% 89%;
 
-    --primary: 45 85% 58%;        /* #fabd2f gruvbox yellow */
-    --primary-foreground: 24 13% 20%;
+    --primary: 217 92% 66%;        /* #7aa2f7 tokyo night blue */
+    --primary-foreground: 220 13% 9%;
 
-    --secondary: 41 24% 88%;      /* #f2e5bc gruvbox light1 */
-    --secondary-foreground: 24 13% 20%;
+    --secondary: 220 13% 18%;      /* #414868 tokyo night bg_highlight */
+    --secondary-foreground: 230 23% 89%;
 
-    --muted: 41 24% 88%;
-    --muted-foreground: 32 10% 37%; /* #665c54 gruvbox dark4 */
+    --muted: 220 13% 18%;
+    --muted-foreground: 228 14% 52%; /* #565f89 tokyo night comment */
 
-    --accent: 104 23% 68%;        /* #b8bb26 gruvbox green */
-    --accent-foreground: 24 13% 20%;
+    --accent: 154 75% 64%;         /* #73daca tokyo night teal */
+    --accent-foreground: 220 13% 9%;
 
-    --destructive: 0 89% 58%;     /* #fb4934 gruvbox red */
-    --destructive-foreground: 43 14% 94%;
+    --destructive: 0 84% 70%;      /* #f7768e tokyo night red */
+    --destructive-foreground: 230 23% 89%;
 
-    --border: 41 24% 88%;         /* #f2e5bc gruvbox light1 */
-    --input: 41 24% 88%;
-    --ring: 45 85% 58%;           /* #fabd2f gruvbox yellow */
+    --border: 220 13% 18%;         /* #414868 tokyo night bg_highlight */
+    --input: 220 13% 18%;
+    --ring: 217 92% 66%;           /* #7aa2f7 tokyo night blue */
 
-    --glass-bg: rgba(251, 241, 199, 0.90);
-    --glass-border: rgba(60, 56, 54, 0.15);
-    --glass-shadow: rgba(0, 0, 0, 0.1);
+    --glass-bg: rgba(26, 27, 38, 0.90);
+    --glass-border: rgba(192, 202, 245, 0.15);
+    --glass-shadow: rgba(0, 0, 0, 0.4);
   }
 }
 
@@ -86,6 +86,7 @@
 
   body {
     @apply bg-background text-foreground;
+    font-family: 'Fira Code', monospace;
     /* Enhanced light mode gradient */
     background: linear-gradient(135deg, 
       hsl(220, 13%, 99%) 0%, 
@@ -94,10 +95,10 @@
   }
 
   .dark body {
-    /* Gruvbox light gradient */
+    /* Tokyo Night gradient */
     background: linear-gradient(135deg, 
-      hsl(43, 14%, 96%) 0%, 
-      hsl(41, 24%, 92%) 100%);
+      hsl(220, 13%, 9%) 0%, 
+      hsl(220, 13%, 11%) 100%);
   }
 }
 
