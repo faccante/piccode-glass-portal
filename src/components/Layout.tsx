@@ -7,6 +7,7 @@ import { Search, Github, Package, User } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import Avatar from './Avatar';
 import ThemeToggle from './ThemeToggle';
+import Footer from './Footer';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -25,7 +26,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Fixed Maven-style header */}
       <header className="maven-header">
         <div className="container mx-auto px-4 py-3">
@@ -93,9 +94,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       </header>
 
       {/* Main Content */}
-      <main className="maven-container">
+      <main className="maven-container flex-1">
         {children}
       </main>
+
+      {/* Footer */}
+      <Footer />
     </div>
   );
 };
