@@ -26,8 +26,6 @@ export const usePublicPackages = () => {
   const { data: packages = [], isLoading: loading, refetch: fetchPackages } = useQuery({
     queryKey: ['public-packages'],
     queryFn: async () => {
-      console.log('Fetching all packages...');
-      
       // Fetch all packages with profile join using the specific foreign key relationship
       const { data, error } = await supabase
         .from('package_namespaces')
@@ -46,8 +44,6 @@ export const usePublicPackages = () => {
         console.error('Error fetching packages:', error);
         throw error;
       }
-
-      console.log('Packages with profiles:', data);
 
       // Get latest version for each package
       const packagesWithVersions = await Promise.all(
@@ -70,7 +66,6 @@ export const usePublicPackages = () => {
         })
       );
 
-      console.log('Final packages with versions:', packagesWithVersions);
       return packagesWithVersions;
     },
   });

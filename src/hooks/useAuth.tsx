@@ -37,7 +37,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.email);
         setSession(session);
         setUser(session?.user ?? null);
         
@@ -46,7 +45,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (session.user.email_confirmed_at) {
             setTimeout(async () => {
               try {
-                console.log('Fetching profile for user:', session.user.id);
                 const { data: profileData, error } = await supabase
                   .from('profiles')
                   .select('*')
@@ -56,7 +54,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 if (error) {
                   console.error('Error fetching profile:', error);
                 } else {
-                  console.log('Profile fetched successfully:', profileData);
                   const typedProfile: Profile = {
                     ...profileData,
                     role: profileData.role as 'user' | 'manager' | 'moderator'

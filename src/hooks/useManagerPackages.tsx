@@ -41,8 +41,6 @@ export const useManagerPackages = () => {
   const fetchPackages = async (page: number = 1, limit: number = 10, search: string = '', status: string = '') => {
     if (!user) throw new Error('User not authenticated');
 
-    console.log('Fetching manager packages...', { page, limit, search, status });
-
     let query = supabase
       .from('package_namespaces')
       .select(`
@@ -76,8 +74,6 @@ export const useManagerPackages = () => {
       console.error('Error fetching manager packages:', error);
       throw error;
     }
-
-    console.log('Manager packages data:', data);
 
     // Get latest version for each package
     const packagesWithVersions = await Promise.all(

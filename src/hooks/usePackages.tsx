@@ -49,8 +49,6 @@ export const usePackages = () => {
   const { data: packages = [], isLoading: loading, refetch: fetchPackages } = useQuery({
     queryKey: ['packages'],
     queryFn: async () => {
-      console.log('Fetching packages...');
-      
       const { data, error } = await supabase
         .from('package_namespaces')
         .select(`
@@ -67,8 +65,6 @@ export const usePackages = () => {
         console.error('Error fetching packages:', error);
         throw error;
       }
-
-      console.log('Raw packages data:', data);
 
       // Get latest version for each package
       const packagesWithVersions = await Promise.all(
@@ -91,7 +87,6 @@ export const usePackages = () => {
         })
       );
 
-      console.log('Packages with versions:', packagesWithVersions);
       return packagesWithVersions as PackageNamespace[];
     },
   });
@@ -134,8 +129,6 @@ export const usePackages = () => {
     const fileName = `${packageName}-${version}.jar`;
     const filePath = `${packageName}/${version}/${fileName}`;
 
-    console.log('Uploading file to storage:', filePath);
-
     const { data, error } = await supabase.storage
       .from('jar-files')
       .upload(filePath, file, {
@@ -148,14 +141,11 @@ export const usePackages = () => {
       throw error;
     }
 
-    console.log('File uploaded successfully:', data);
-
     // Get the public URL for the uploaded file
     const { data: publicUrlData } = supabase.storage
       .from('jar-files')
       .getPublicUrl(filePath);
 
-    console.log('Public URL:', publicUrlData.publicUrl);
     return publicUrlData.publicUrl;
   };
 
@@ -237,8 +227,6 @@ export const usePackages = () => {
     mutationFn: async (packageData: SubmitPackageData) => {
       if (!user) throw new Error('User not authenticated');
 
-      console.log('Submitting package:', packageData);
-
       // Create the package namespace
       const { data: namespaceData, error: namespaceError } = await supabase
         .from('package_namespaces')
@@ -258,8 +246,6 @@ export const usePackages = () => {
         console.error('Error creating namespace:', namespaceError);
         throw namespaceError;
       }
-
-      console.log('Created namespace:', namespaceData);
 
       // Upload the JAR file to storage
       const jarFileUrl = await uploadJarFile(packageData.jarFile, packageData.name, packageData.version);
@@ -281,8 +267,6 @@ export const usePackages = () => {
         console.error('Error creating version:', versionError);
         throw versionError;
       }
-
-      console.log('Created version:', versionData);
 
       return namespaceData;
     },
