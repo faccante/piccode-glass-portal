@@ -202,6 +202,35 @@ export class SecurityService {
     };
   }
 
+  static async recordSecureDownload(versionId: string): Promise<void> {
+    // Validate that the version is safe to download
+    const { data: versionData, error: versionError } = await supabase
+      .from('package_versions')
+      .select('malware_scan_status, package_namespace_id')
+      .eq('id', versionId)
+      .single();
+
+    if (versionError) throw versionError;
+
+    // Block download if infected
+    if (versionData.malware_scan_status === 'infected') {
+      throw new Error('Download blocked: File contains malware');
+    }
+
+    if (versionData.malware_scan_status === 'pending') {
+      throw new Error('Download blocked: File scan in progress');
+    }
+
+    // Record download analytics
+    await supabase
+      .from('download_analytics')
+      .insert({
+        package_id: versionId,
+        ip_address: null, // Would be set by backend
+        user_agent: navigator.userAgent
+      });
+  }
+
   private static isValidGitHubUrl(url: string): boolean {
     try {
       const urlObj = new URL(url);

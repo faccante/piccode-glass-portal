@@ -10,38 +10,31 @@ const SecurityDashboard: React.FC = () => {
   const { data: securityStats } = useQuery({
     queryKey: ['security-stats'],
     queryFn: async () => {
-      // Get scan statistics
-      const { data: scanResults, error: scanError } = await supabase
-        .from('file_scan_results')
-        .select('scan_status');
-
-      if (scanError) throw scanError;
-
-      // Get version statistics
+      // Get version statistics with malware scan status
       const { data: versions, error: versionError } = await supabase
         .from('package_versions')
         .select('malware_scan_status');
 
       if (versionError) throw versionError;
 
-      // Get role audit logs (recent)
-      const { data: auditLogs, error: auditError } = await supabase
-        .from('role_audit_log')
-        .select('*')
-        .order('changed_at', { ascending: false })
-        .limit(10);
+      // Get total packages for context
+      const { data: packages, error: packageError } = await supabase
+        .from('package_namespaces')
+        .select('id, status');
 
-      if (auditError) throw auditError;
+      if (packageError) throw packageError;
 
       const stats = {
-        totalScans: scanResults.length,
-        cleanFiles: scanResults.filter(scan => scan.scan_status === 'clean').length,
-        infectedFiles: scanResults.filter(scan => scan.scan_status === 'infected').length,
+        totalScans: versions.length,
+        cleanFiles: versions.filter(v => v.malware_scan_status === 'clean').length,
+        infectedFiles: versions.filter(v => v.malware_scan_status === 'infected').length,
         pendingScans: versions.filter(v => v.malware_scan_status === 'pending').length,
-        recentRoleChanges: auditLogs.length
+        totalPackages: packages.length,
+        approvedPackages: packages.filter(p => p.status === 'approved').length,
+        recentRoleChanges: 0 // Placeholder for now
       };
 
-      return { ...stats, auditLogs };
+      return { ...stats, auditLogs: [] };
     },
   });
 

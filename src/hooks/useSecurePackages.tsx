@@ -172,75 +172,65 @@ export const useSecurePackages = () => {
   };
 
   const secureRecordDownload = async (versionId: string) => {
-    // Check if version is clean before allowing download
-    const { data: versionData, error: versionError } = await supabase
-      .from('package_versions')
-      .select('package_namespace_id, jar_file_url, malware_scan_status')
-      .eq('id', versionId)
-      .single();
+    try {
+      await SecurityService.recordSecureDownload(versionId);
+      
+      // Get current download count and increment it
+      const { data: currentVersion, error: getCurrentError } = await supabase
+        .from('package_versions')
+        .select('downloads, jar_file_url, package_namespace_id')
+        .eq('id', versionId)
+        .single();
 
-    if (versionError) throw versionError;
+      if (getCurrentError) throw getCurrentError;
 
-    // Block download if malware detected
-    if (versionData.malware_scan_status === 'infected') {
-      throw new Error('Download blocked: File contains malware');
+      // Update the version's download count
+      const { error: versionUpdateError } = await supabase
+        .from('package_versions')
+        .update({ 
+          downloads: (currentVersion.downloads || 0) + 1
+        })
+        .eq('id', versionId);
+
+      if (versionUpdateError) throw versionUpdateError;
+
+      // Get current namespace download count and increment it
+      const { data: currentNamespace, error: getCurrentNamespaceError } = await supabase
+        .from('package_namespaces')
+        .select('total_downloads')
+        .eq('id', currentVersion.package_namespace_id)
+        .single();
+
+      if (getCurrentNamespaceError) throw getCurrentNamespaceError;
+
+      // Update the package namespace's total downloads count
+      const { error: namespaceUpdateError } = await supabase
+        .from('package_namespaces')
+        .update({ 
+          total_downloads: (currentNamespace.total_downloads || 0) + 1
+        })
+        .eq('id', currentVersion.package_namespace_id);
+
+      if (namespaceUpdateError) throw namespaceUpdateError;
+
+      // Actually download the file if jar_file_url exists
+      if (currentVersion.jar_file_url) {
+        // Create a temporary anchor element to trigger download
+        const link = document.createElement('a');
+        link.href = currentVersion.jar_file_url;
+        link.download = currentVersion.jar_file_url.split('/').pop() || 'package.jar';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+
+      // Invalidate queries to refresh download counts
+      queryClient.invalidateQueries({ queryKey: ['secure-packages'] });
+    } catch (error) {
+      console.error('Secure download failed:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Download failed';
+      throw new Error(errorMessage);
     }
-
-    if (versionData.malware_scan_status === 'pending') {
-      throw new Error('Download blocked: File scan in progress');
-    }
-
-    // Get current download count and increment it
-    const { data: currentVersion, error: getCurrentError } = await supabase
-      .from('package_versions')
-      .select('downloads')
-      .eq('id', versionId)
-      .single();
-
-    if (getCurrentError) throw getCurrentError;
-
-    // Update the version's download count
-    const { error: versionUpdateError } = await supabase
-      .from('package_versions')
-      .update({ 
-        downloads: (currentVersion.downloads || 0) + 1
-      })
-      .eq('id', versionId);
-
-    if (versionUpdateError) throw versionUpdateError;
-
-    // Get current namespace download count and increment it
-    const { data: currentNamespace, error: getCurrentNamespaceError } = await supabase
-      .from('package_namespaces')
-      .select('total_downloads')
-      .eq('id', versionData.package_namespace_id)
-      .single();
-
-    if (getCurrentNamespaceError) throw getCurrentNamespaceError;
-
-    // Update the package namespace's total downloads count
-    const { error: namespaceUpdateError } = await supabase
-      .from('package_namespaces')
-      .update({ 
-        total_downloads: (currentNamespace.total_downloads || 0) + 1
-      })
-      .eq('id', versionData.package_namespace_id);
-
-    if (namespaceUpdateError) throw namespaceUpdateError;
-
-    // Actually download the file if jar_file_url exists
-    if (versionData.jar_file_url) {
-      // Create a temporary anchor element to trigger download
-      const link = document.createElement('a');
-      link.href = versionData.jar_file_url;
-      link.download = versionData.jar_file_url.split('/').pop() || 'package.jar';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
-
-    // Invalidate queries to refresh download counts
-    queryClient.invalidateQueries({ queryKey: ['secure-packages'] });
   };
 
   const secureSubmitPackage = useMutation({

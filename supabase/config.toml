@@ -1,1 +1,7 @@
 project_id = "pgpzinkbtzqilufilgpr"
+
+[storage]
+file_size_limit = "104857600"
+
+[functions.package-api]
+verify_jwt = false

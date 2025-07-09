@@ -204,19 +204,13 @@ const SecureVersionUploadForm: React.FC<SecureVersionUploadFormProps> = ({
         throw new Error(`Failed to save version: ${insertError.message}`);
       }
 
-      // Record scan results
-      await supabase
-        .from('file_scan_results')
-        .insert({
-          package_version_id: newVersion.id,
-          scan_status: 'clean',
-          scan_provider: 'internal',
-          scan_details: {
-            fileHash,
-            scanDate: new Date().toISOString(),
-            fileSize: formData.jarFile.size
-          }
-        });
+      // Scan results are now stored in the package_versions table
+      console.log('Version uploaded with security scan results:', {
+        version: newVersion.id,
+        fileHash,
+        scanStatus: 'clean',
+        fileSize: formData.jarFile.size
+      });
 
       setUploadProgress(100);
 
