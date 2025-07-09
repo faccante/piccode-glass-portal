@@ -1,73 +1,117 @@
-# Welcome to your Lovable project
+# PiccodeScript Registry
 
-## Project info
+A secure package registry for PiccodeScript packages with comprehensive security features.
 
-**URL**: https://lovable.dev/projects/54ee9cf8-9c3f-4953-8bdf-856420bbd3a3
+## Features
 
-## How can I edit this code?
+- **Secure Package Management**: File validation, malware scanning, and hash verification
+- **Role-based Access Control**: User, Manager, and Moderator roles with proper authorization
+- **Download Analytics**: Track package downloads and usage statistics
+- **Security Dashboard**: Monitor security scans and role changes
+- **Backend API**: RESTful API for programmatic access
 
-There are several ways of editing your application.
+## Getting Started
 
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/54ee9cf8-9c3f-4953-8bdf-856420bbd3a3) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+### Development
+```bash
+npm install
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+### Production Server
+To run the full-stack application with backend API:
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+**Linux/Mac:**
+```bash
+chmod +x start-server.sh
+./start-server.sh
+```
 
-**Use GitHub Codespaces**
+**Windows:**
+```bash
+start-server.bat
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+**Manual:**
+```bash
+npm run build
+node server.js
+```
 
-## What technologies are used for this project?
+The server will start on `http://localhost:8080`
 
-This project is built with:
+## API Endpoints
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+### Get Package Information
+```
+GET /api/v1/package/{package_name}
+```
 
-## How can I deploy this project?
+Returns detailed information about a package including all versions and metadata.
 
-Simply open [Lovable](https://lovable.dev/projects/54ee9cf8-9c3f-4953-8bdf-856420bbd3a3) and click on Share -> Publish.
+**Example:**
+```bash
+curl http://localhost:8080/api/v1/package/raylib
+```
 
-## Can I connect a custom domain to my Lovable project?
+**Response:**
+```json
+{
+  "id": "uuid",
+  "name": "raylib",
+  "description": "Package description",
+  "license": "MIT",
+  "github_repo": "https://github.com/user/repo",
+  "total_downloads": 1234,
+  "created_at": "2024-01-01T00:00:00Z",
+  "updated_at": "2024-01-01T00:00:00Z",
+  "author": {
+    "full_name": "Author Name",
+    "email": "author@example.com",
+    "avatar_url": "https://avatar.url"
+  },
+  "versions": [
+    {
+      "id": "uuid",
+      "version": "1.0.0",
+      "created_at": "2024-01-01T00:00:00Z",
+      "downloads": 100,
+      "jar_file_url": "https://storage.url/file.jar",
+      "jar_file_size": 1024,
+      "scan_status": "clean",
+      "scan_date": "2024-01-01T00:00:00Z",
+      "file_hash": "sha256hash"
+    }
+  ]
+}
+```
 
-Yes, you can!
+## Security Features
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+- **File Validation**: 100MB size limit, .jar extension only
+- **Malware Scanning**: Simulated malware detection with pattern matching
+- **Hash Verification**: SHA-256 file integrity checking
+- **Input Sanitization**: XSS protection and SQL injection prevention
+- **Role-based Access**: Proper authorization with audit logging
+- **Download Protection**: Blocks infected files from being downloaded
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+## Architecture
+
+- **Frontend**: React + Vite + TypeScript + Tailwind CSS
+- **Backend**: Node.js + Express
+- **Database**: Supabase (PostgreSQL)
+- **Storage**: Supabase Storage
+- **Authentication**: Supabase Auth
+
+## Database Schema
+
+- `package_namespaces`: Package information and metadata
+- `package_versions`: Version details with security scanning
+- `profiles`: User profiles and roles
+- `download_analytics`: Download tracking
+- `file_scan_results`: Security scan results
+- `role_audit_log`: Role change audit trail
+
+## Original Lovable Project
+
+This project was created with [Lovable](https://lovable.dev/projects/54ee9cf8-9c3f-4953-8bdf-856420bbd3a3). You can continue editing it there or work locally with your preferred IDE.
